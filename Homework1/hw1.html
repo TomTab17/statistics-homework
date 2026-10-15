@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Homework 1 · Private key → public key</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Source+Code+Pro:wght@400;600&display=swap"
+    />
+    <link rel="stylesheet" href="hw1.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <a class="back" href="../index.html">← Statistics · Homework</a>
+        <p class="eyebrow">Homework 1 · Public-key cryptography</p>
+        <h1>Private key <span>→</span> public key</h1>
+        <div class="rule"></div>
+        <p class="lead">
+          In Ethereum the public key is derived from the private key through
+          elliptic-curve scalar multiplication, <span class="m">Q = kG</span>.
+          Computing <span class="m">Q</span> from <span class="m">k</span> is
+          easy and deterministic, whereas recovering
+          <span class="m">k</span> from <span class="m">Q</span> requires
+          solving the Elliptic Curve Discrete Logarithm Problem (ECDLP). On this
+          page I rebuild the mechanism on a small toy curve and then study some
+          statistical properties of the points it produces.
+        </p>
+        <div class="student">
+          <b>Tommaso Tabacchini</b><span>( Student ID: <i>1934387</i> )</span>
+        </div>
+        <nav class="toc" id="toc" aria-label="Contents">
+          <div>
+            <p>Part I · From private to public key</p>
+            <a href="#s11"><b>1.1</b>The toy curve</a>
+            <a href="#s12"><b>1.2</b>Base point and private key</a>
+            <a href="#s13"><b>1.3</b>Point addition</a>
+            <a href="#s14"><b>1.4</b>Computing G, 2G, …, kG</a>
+            <a href="#s15"><b>1.5</b>The toy public key</a>
+            <a href="#s16"><b>1.6</b>Step-by-step animation</a>
+          </div>
+          <div>
+            <p>Part II · Statistical exploration</p>
+            <a href="#s21"><b>2.1</b>Repeating the experiment</a>
+            <a href="#s22"><b>2.2</b>Coordinates and value frequencies</a>
+            <a href="#s23"><b>2.3</b>Distribution of bits</a>
+            <a href="#s24"><b>2.4</b>Apparent uniformity</a>
+            <a href="#s25"><b>2.5</b>Input–output correlation</a>
+            <a href="#s26"><b>2.6</b>Avalanche-like behaviour</a>
+          </div>
+          <div>
+            <p>Part III · Discussion</p>
+            <a href="#s3"><b>3</b>One-way function vs hash function</a>
+          </div>
+        </nav>
+      </header>
+      <a class="totoc" id="totoc" href="#toc">↑ Contents</a>
+
+      <!--  PART 1  -->
+      <section class="part">
+        <p class="eyebrow">Part I</p>
+        <h2>From the private key to the public key</h2>
+        <p class="intro">
+          As the page scrolls, the figure on the side follows the text: it
+          always shows the curve and the points computed up to the current step.
+        </p>
+
+        <div class="lab">
+          <aside class="stage">
+            <div class="board">
+              <svg
+                id="grid"
+                viewBox="0 0 400 406"
+                role="img"
+                aria-label="Points of the toy curve on the 17 by 17 grid"
+              ></svg>
+              <div>
+                <div class="cap" id="cap" aria-live="polite"></div>
+                <div class="legend">
+                  <span
+                    ><i style="background: var(--mark)"></i>point on the curve /
+                    computed multiple</span
+                  >
+                  <span
+                    ><i style="background: var(--ink)"></i>current result</span
+                  >
+                  <span><i style="background: var(--hi)"></i>public key</span>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <div class="steps" id="steps">
+            <article class="step" id="s11" data-view="curve">
+              <span class="num">1.1</span>
+              <h3>The toy curve</h3>
+              <p>
+                Ethereum uses the curve secp256k1, with equation
+                <span class="m">y² = x³ + 7</span> defined over a very large
+                prime field (about 2²⁵⁶ elements). For this exercise I keep the
+                same equation but work with the integers modulo 17:
+              </p>
+              <div class="box formula">
+                E :&nbsp; y² ≡ x³ + 7 &nbsp;(mod 17)
+              </div>
+              <p>
+                A point of the curve is a pair
+                <span class="m">(x, y)</span> with both coordinates in
+                <span class="m">{0, …, 16}</span> that satisfies the equation.
+                Checking all 17 × 17 pairs gives <strong>17 points</strong>,
+                which are the ones drawn in the figure. The "curve" is therefore
+                no longer a continuous line, but a finite set of points on a
+                grid.
+              </p>
+              <p>
+                To make the addition work, one extra point is needed: the
+                <em>point at infinity</em> <span class="m">O</span>, which plays
+                the role of zero. This gives 18 elements in total. The points
+                are also symmetric: if <span class="m">(x, y)</span> is on the
+                curve then <span class="m">(x, 17 − y)</span> is too, since
+                <span class="m">(−y)² = y²</span>. This second point is the
+                opposite of the first one, written <span class="m">−P</span>.
+              </p>
+            </article>
+
+            <article class="step" id="s12" data-view="base">
+              <span class="num">1.2</span>
+              <h3>Base point and private key</h3>
+              <p>
+                Two ingredients are needed. The <em>base point</em>
+                <span class="m">G</span> is public and the same for everyone,
+                while the <em>private key</em> <span class="m">k</span> is an
+                integer known only to its owner.
+              </p>
+              <div class="def">
+                <div><small>BASE POINT</small><b>G = (1, 5)</b></div>
+                <div><small>PRIVATE KEY</small><b>k = 6</b></div>
+                <div><small>PUBLIC KEY</small><b>Q = kG</b></div>
+              </div>
+              <p>
+                First I check that <span class="m">G</span> really is on the
+                curve: <span class="m">5² = 25 ≡ 8</span> and
+                <span class="m">1³ + 7 = 8 (mod 17)</span>, so it is. The public
+                key is simply <span class="m">G</span> added to itself
+                <span class="m">k</span> times:
+              </p>
+              <div class="box formula">
+                Q = kG = G + G + … + G <small>(k terms)</small>
+              </div>
+              <p>
+                Before computing anything, it is therefore necessary to define
+                what adding two points means.
+              </p>
+            </article>
+
+            <article class="step" id="s13" data-view="add">
+              <span class="num">1.3</span>
+              <h3>Point addition</h3>
+              <p>
+                To add <span class="m">P = (x₁, y₁)</span> and
+                <span class="m">Q = (x₂, y₂)</span> the idea is geometric: draw
+                the line through <span class="m">P</span> and
+                <span class="m">Q</span>, find the third point where it meets
+                the curve, and reflect it (<span class="m">y → 17 − y</span>).
+                The result is <span class="m">R = P + Q = (x₃, y₃)</span>. In
+                formulas, with <span class="m">λ</span> the slope of the line:
+              </p>
+              <div class="box formula">
+                λ = (y₂ − y₁) · (x₂ − x₁)⁻¹ <small>if P ≠ Q (chord)</small
+                ><br />
+                λ = 3x₁² · (2y₁)⁻¹ <small>if P = Q (tangent, “doubling”)</small
+                ><br />
+                x₃ = λ² − x₁ − x₂<br />
+                y₃ = λ(x₁ − x₃) − y₁ <small>all modulo 17</small>
+              </div>
+              <p>
+                Since all arithmetic is modulo 17, there are no fractions:
+                dividing by <span class="m">a</span> means multiplying by its
+                inverse <span class="m">a⁻¹</span>, i.e. the number with
+                <span class="m">a · a⁻¹ ≡ 1</span>. For example
+                <span class="m">10⁻¹ = 12</span>, because
+                <span class="m">10 · 12 = 120 ≡ 1</span>. There are also two
+                special cases: <span class="m">P + O = P</span> and
+                <span class="m">P + (−P) = O</span>.
+              </p>
+              <p>
+                The figure shows the example <span class="m">G + 2G</span>: the
+                small dots are the 17 points of the line modulo 17, and exactly
+                three of them lie on the curve. This is the code I wrote:
+              </p>
+              <pre
+                id="code"
+                aria-label="JavaScript source of the point addition (file ec.js)"
+              >
+const p = 17;                          // field modulus
+const O = null;                        // point at infinity (neutral element)
+const mod = a =&gt; ((a % p) + p) % p;    // result always in 0 … p−1
+
+// Modular inverse by Fermat's little theorem: a⁻¹ ≡ a^(p−2) (mod p)
+function inv(a) {
+  let r = 1;
+  for (let i = 0; i &lt; p - 2; i++) r = mod(r * a);
+  return r;
+}
+
+// Point addition on y² = x³ + 7 (mod p). Points are [x, y] or O.
+function add(P, Q) {
+  if (P === O) return Q;                                   // O + Q = Q
+  if (Q === O) return P;                                   // P + O = P
+  const [x1, y1] = P, [x2, y2] = Q;
+  if (x1 === x2 &amp;&amp; mod(y1 + y2) === 0) return O;           // P + (−P) = O
+  const lambda = (x1 === x2)
+    ? mod(3 * x1 * x1 * inv(2 * y1))                       // tangent (doubling)
+    : mod((y2 - y1) * inv(x2 - x1));                       // chord
+  const x3 = mod(lambda * lambda - x1 - x2);
+  const y3 = mod(lambda * (x1 - x3) - y1);
+  return [x3, y3];
+}
+
+// Returns [G, 2G, 3G, …, kG] by repeated addition.
+function multiples(G, k) {
+  const list = [];
+  let R = O;
+  for (let i = 1; i &lt;= k; i++) { R = add(R, G); list.push(R); }
+  return list;
+}
+
+// Returns kG by double-and-add: about log2(k) doublings and at most as many additions.
+function mulDA(G, k) {
+  let R = O;
+  for (const bit of k.toString(2)) {
+    R = add(R, R);                                         // doubling
+    if (bit === "1") R = add(R, G);                        // addition
+  }
+  return R;
+}</pre
+              >
+            </article>
+
+            <div id="mults" class="anchor"></div>
+
+            <article class="step" id="s15" data-view="key">
+              <span class="num">1.5</span>
+              <h3>The toy public key</h3>
+              <p>
+                This is the list printed by the program,
+                <span class="m">G, 2G, …, kG</span>. The last point is the
+                public key:
+              </p>
+              <div class="box out" id="out"></div>
+              <div class="box pk">
+                <small>TOY PUBLIC KEY</small><b id="pk"></b>
+              </div>
+              <p>
+                Computing it took <span class="m">k − 1 = 5</span> additions.
+                Adding <span class="m">G</span> one at a time works here, but it
+                is too slow for a large <span class="m">k</span>. A faster
+                method is double-and-add, which I implemented in the
+                <code>mulDA</code> function above: it needs about
+                <span class="m">log₂ k</span>
+                doublings and at most as many additions. For example
+                <span class="m">1000 = 1111101000</span> in binary, so
+                <span class="m">1000G</span> takes 9 doublings and 5 additions
+                instead of 999 additions:
+              </p>
+              <div class="box out" id="da"></div>
+              <p>
+                Going backwards means finding how many times
+                <span class="m">G</span> was added to obtain
+                <span class="m">Q</span>. On the toy curve a few attempts are
+                enough, but on secp256k1 there are about 2²⁵⁶ possibilities and
+                no efficient method is known.
+              </p>
+            </article>
+
+            <article class="step" id="s16" data-view="anim">
+              <span class="num">1.6</span>
+              <h3>Step-by-step animation</h3>
+              <p>
+                The animation repeats the algorithm slowly, one move at a time:
+                first the two points being added, then the line through them,
+                the third intersection and finally its reflection, which is the
+                next multiple.
+              </p>
+              <div class="ctrl">
+                <label
+                  >k <input id="ak" type="number" min="1" max="8" value="6"
+                /></label>
+                <label
+                  >speed
+                  <select id="aspeed">
+                    <option value="1500">slow</option>
+                    <option value="2800">very slow</option>
+                  </select>
+                </label>
+              </div>
+              <div class="ctrl">
+                <button class="primary" id="aplay">Play</button>
+                <button id="astep">Next move</button>
+                <button id="areset">Reset</button>
+              </div>
+              <p class="note" id="aprog"></p>
+              <p class="note">
+                Only <span class="m">k</span> from 1 to 8 is allowed, because
+                with this base point <span class="m">9G = O</span> (more on this
+                in Part II).
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!--  PART 2  -->
+      <section class="part">
+        <p class="eyebrow">Part II</p>
+        <h2>Statistical exploration</h2>
+        <p class="intro">
+          In this part I repeat the experiment for all the useful values of
+          <span class="m">k</span>, and the base point can be changed from the
+          menu. All the charts and numbers below are recomputed for the selected
+          point. The sample is very small by construction, so the results
+          illustrate the structure rather than estimate anything precisely.
+        </p>
+
+        <div class="bar">
+          <label
+            >Base point G
+            <select id="sg"></select
+          ></label>
+          <span class="info"
+            >order <b>n = <span data-b="n"></span></b> · sample:
+            <b>k = 1 … <span data-b="n1"></span></b> (<span data-b="n1"></span>
+            points)</span
+          >
+        </div>
+
+        <div class="find" id="s21">
+          <div>
+            <span class="num">2.1</span>
+            <h3>Repeating the experiment</h3>
+            <p>
+              The first thing I notice when computing
+              <span class="m">kG</span> for larger and larger
+              <span class="m">k</span> is that the sequence starts repeating.
+              The smallest <span class="m">n</span> such that
+              <span class="m">nG = O</span> is called the <em>order</em> of
+              <span class="m">G</span>; here
+              <span class="v">n = <span data-b="n"></span></span>. After that
+              the points come back in the same order:
+              <span class="m">(k + n)G = kG</span>.
+            </p>
+            <p>
+              This means that only <span class="m">k = 1, …, n − 1</span> give
+              different public keys, so these are the values I use as the
+              sample. The curve has 18 elements and the order of a point always
+              divides 18. The base point of the exercise,
+              <span class="m">G = (1, 5)</span>, has order 9 and only reaches
+              half of the curve, while for example
+              <span class="m">(6, 6)</span> has order 18 and generates all of
+              it.
+            </p>
+          </div>
+          <div class="fig">
+            <h4>k → kG for two periods (the repetition is dimmed)</h4>
+            <div class="seq" id="seq"></div>
+          </div>
+        </div>
+
+        <div class="find" id="s22">
+          <div>
+            <span class="num">2.2</span>
+            <h3>
+              Distribution of the coordinates and frequency of individual values
+            </h3>
+            <p>
+              The two histograms count how many times each value from 0 to 16
+              appears as an <span class="m">x</span> or as a
+              <span class="m">y</span> coordinate among the
+              <span data-b="n1"></span> points.
+            </p>
+            <p>
+              <strong>y:</strong> no value appears twice. The reason is that
+              modulo 17 every number has exactly one cube root (the map
+              <span class="m">x → x³</span> is a bijection), so once
+              <span class="m">y</span> is fixed there is only one possible
+              <span class="m">x</span>.
+            </p>
+            <p>
+              <strong>x:</strong> the values come in pairs, because
+              <span class="m">P</span> and <span class="m">−P</span> have the
+              same <span class="m">x</span>. The only exception is
+              <span class="m">x = 3</span>: the point
+              <span class="m">(3, 0)</span> is its own opposite, and it only
+              shows up when the base point has even order. Only
+              <span class="v"><span data-b="dx"></span> of 17</span> values of
+              <span class="m">x</span> appear at all (9 over the whole curve),
+              so the coordinates are clearly not uniform on
+              <span class="m">{0, …, 16}</span>.
+            </p>
+          </div>
+          <div>
+            <div class="fig">
+              <h4>Frequency of each x value</h4>
+              <svg id="hx"></svg>
+            </div>
+            <div class="fig">
+              <h4>Frequency of each y value</h4>
+              <svg id="hy"></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="find" id="s23">
+          <div>
+            <span class="num">2.3</span>
+            <h3>Distribution of bits</h3>
+            <p>
+              I encode each coordinate on 5 bits (the values go up to 16), so
+              every point becomes a string of 10 bits. The chart shows, for each
+              bit position, the fraction of points where that bit is 1. A truly
+              random bit string would give 0.5 everywhere.
+            </p>
+            <p>
+              Some positions are close to 0.5, but the highest bits are very
+              unbalanced. Bit 4 is 1 only for the value 16, and
+              <span class="m">x = 16</span> never appears on this curve. This
+              bias is therefore caused by the binary representation of the
+              numbers (17 is not a power of two, so bit 4 is set by just one
+              value) and not by the scalar multiplication itself.
+            </p>
+          </div>
+          <div class="fig">
+            <h4>Fraction of ones per bit position (x₄…x₀, y₄…y₀)</h4>
+            <svg id="hb"></svg>
+          </div>
+        </div>
+
+        <div class="find" id="s24">
+          <div>
+            <span class="num">2.4</span>
+            <h3>Apparent uniformity</h3>
+            <p>
+              Uniformity has to be assessed on the right set. Inside one period,
+              the map
+              <span class="m">k → kG</span> is a bijection between
+              <span class="m">{0, …, n − 1}</span> and the points generated by
+              <span class="m">G</span>: every point comes from exactly one
+              <span class="m">k</span>. So if the private key is chosen
+              uniformly at random, the public key is
+              <strong>exactly uniform over those points</strong>.
+            </p>
+            <p>
+              This is not an empirical result: it follows directly from the
+              group structure. What is not uniform, as shown in 2.2 and 2.3, is
+              the representation of the points as coordinates and bits.
+            </p>
+          </div>
+          <div class="tiles">
+            <div>
+              <b><span data-b="n1"></span>/<span data-b="n1"></span></b
+              ><small>distinct points in one period</small>
+            </div>
+            <div>
+              <b><span data-b="dx"></span>/17</b
+              ><small>distinct x values</small>
+            </div>
+            <div>
+              <b><span data-b="dy"></span>/17</b
+              ><small>distinct y values</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="find" id="s25">
+          <div>
+            <span class="num">2.5</span>
+            <h3>Correlation between input and output</h3>
+            <p>
+              The scatter plots compare the input
+              <span class="m">k</span> against with each coordinate of the
+              output; <span class="m">r</span> is the Pearson correlation
+              coefficient.
+            </p>
+            <p>
+              For <span class="m">x</span> I get
+              <span class="v">r = <span data-b="rx"></span></span>, and it is
+              exactly zero for every base point. The reason is that the plot is
+              symmetric around <span class="m">k = n/2</span>: the point
+              <span class="m">(n − k)G = −kG</span> has the same
+              <span class="m">x</span> as <span class="m">kG</span>. For
+              <span class="m">y</span> I get
+              <span class="v">r = <span data-b="ry"></span></span>, but this
+              number changes with the base point and flips sign if
+              <span class="m">G</span> is replaced by <span class="m">−G</span>,
+              so with so few points it carries no real meaning.
+            </p>
+            <p>
+              There is therefore no linear trend between
+              <span class="m">k</span> and the coordinates. Input and output are
+              nevertheless linked by an exact algebraic rule,
+              <span class="m">(k₁ + k₂)G = k₁G + k₂G</span>, and the symmetry in
+              the plot is one visible consequence of it.
+            </p>
+          </div>
+          <div>
+            <div class="fig">
+              <h4>k versus x coordinate of kG</h4>
+              <svg id="sx"></svg>
+            </div>
+            <div class="fig">
+              <h4>k versus y coordinate of kG</h4>
+              <svg id="sy"></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="find" id="s26">
+          <div>
+            <span class="num">2.6</span>
+            <h3>Avalanche-like behaviour</h3>
+            <p>
+              A function has the avalanche effect if changing one bit of the
+              input changes, on average, half of the output bits. To test it, I
+              take every <span class="m">k</span> in the sample, flip one bit of
+              <span class="m">k</span> at a time and count how many of the 10
+              output bits change. Pairs that involve
+              <span class="m">O</span> are skipped, since it has no coordinates.
+              If the new key is outside the period (for example 13 when
+              <span class="m">n = 9</span>) I reduce it modulo
+              <span class="m">n</span>, because
+              <span class="m">(k + n)G = kG</span>.
+            </p>
+            <p>
+              On average <span class="v"><span data-b="av"></span></span> of the
+              output bits change. However, 50% is not the right reference here:
+              two different points picked at random from the same set differ on
+              average in <span class="v"><span data-b="base"></span></span> of
+              their bits, because some bit positions are almost always the same
+              (2.3). Measured against this baseline, nearby keys behave roughly
+              like unrelated random points.
+            </p>
+            <p>
+              The resemblance, however, is only superficial. The two outputs are
+              connected by a simple relation,
+              <span class="m">(k + 1)G = kG + G</span>, so anyone can get the
+              public key of <span class="m">k + 1</span> from the public key of
+              <span class="m">k</span> without knowing <span class="m">k</span>.
+              A good hash function must not exhibit any such relation between
+              similar inputs.
+            </p>
+          </div>
+          <div class="fig">
+            <h4>Mean fraction of output bits changed, per flipped bit of k</h4>
+            <svg id="ha"></svg>
+          </div>
+        </div>
+      </section>
+
+      <!--  PART 3  -->
+      <section class="part" id="s3">
+        <p class="eyebrow">Part III</p>
+        <h2>Discussion</h2>
+        <p class="intro">
+          Which of these properties matter for a one-way function like
+          <span class="m">k → kG</span>, and which ones are typical of
+          cryptographic hash functions?
+        </p>
+        <div class="tw">
+          <table class="disc">
+            <thead>
+              <tr>
+                <th>Property</th>
+                <th>One-way function k → kG</th>
+                <th>Cryptographic hash function</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Determinism</td>
+                <td>
+                  <span class="tag y">ESSENTIAL</span><br />The same
+                  <span class="m">k</span> must always give the same
+                  <span class="m">Q</span>, otherwise a key pair could never be
+                  reproduced.
+                </td>
+                <td>
+                  <span class="tag y">ESSENTIAL</span><br />The same message
+                  always gives the same hash.
+                </td>
+              </tr>
+              <tr>
+                <td>Easy forward, hard backward</td>
+                <td>
+                  <span class="tag y">ESSENTIAL</span><br />This is the defining
+                  property. Inversion is the ECDLP: trivial on the toy curve
+                  (<span class="m">n ≤ 18</span>), but impossible in practice on
+                  secp256k1, where the best known attacks need about 2¹²⁸
+                  operations.
+                </td>
+                <td>
+                  <span class="tag y">ESSENTIAL</span><br />Here it is called
+                  preimage resistance. The difference is that it does not rely
+                  on a hard math problem, but on the lack of any exploitable
+                  structure.
+                </td>
+              </tr>
+              <tr>
+                <td>Uniformity of the output</td>
+                <td>
+                  <span class="tag y">MEANINGFUL</span> on the group<br />A
+                  uniform <span class="m">k</span> gives a uniform point among
+                  those generated by <span class="m">G</span> (2.4), so no
+                  public key is more likely than another. Uniform coordinates or
+                  bits are <strong>not</strong> needed, and in fact they are not
+                  uniform (2.2, 2.3).
+                </td>
+                <td>
+                  <span class="tag y">ESSENTIAL</span> on the bits<br />The
+                  output should look like a random bit string: balanced bits and
+                  all values equally likely are part of the design.
+                </td>
+              </tr>
+              <tr>
+                <td>Input–output correlation</td>
+                <td>
+                  <span class="tag">PARTLY</span><br />There should be no
+                  statistical trend that helps guess <span class="m">k</span>
+                  from the coordinates. But there is an exact algebraic link,
+                  <span class="m">(k₁ + k₂)G = k₁G + k₂G</span>, and it is there
+                  <strong>on purpose</strong>: key exchange and digital
+                  signatures are built on it.
+                </td>
+                <td>
+                  <span class="tag y">ESSENTIAL</span><br />There must be no
+                  usable relation of any kind, statistical or algebraic, between
+                  inputs and outputs.
+                </td>
+              </tr>
+              <tr>
+                <td>Avalanche effect</td>
+                <td>
+                  <span class="tag">NOT REQUIRED</span><br />Outputs of nearby
+                  keys look unrelated (2.6), but they are connected by a public
+                  relation. Security does not depend on this.
+                </td>
+                <td>
+                  <span class="tag y">SPECIFIC</span><br />One of the main
+                  design goals: flipping one input bit should change each output
+                  bit with probability ½.
+                </td>
+              </tr>
+              <tr>
+                <td>Collisions</td>
+                <td>
+                  <span class="tag">NOT APPLICABLE</span><br />For
+                  <span class="m">k</span> in
+                  <span class="m">{0, …, n − 1}</span> the map is one-to-one
+                  (2.1), so two different private keys never give the same
+                  public key.
+                </td>
+                <td>
+                  <span class="tag y">SPECIFIC</span><br />A hash compresses
+                  inputs of any length into a fixed length, so collisions must
+                  exist. Collision resistance means that none can be found in
+                  practice.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="concl">
+          <p>
+            In summary, what matters for elliptic-curve scalar multiplication is
+            that it is deterministic, fast in the forward direction, hard to
+            invert, and that a uniform private key gives a uniform public key
+            over the group. All of these come from the group structure, and the
+            experiments show them even on a curve with only 18 elements. The
+            only exception is hardness, which only appears at real cryptographic
+            sizes.
+          </p>
+          <p>
+            Balanced bits, uniform coordinates, the avalanche effect and
+            collision resistance are instead properties of hash functions.
+            Scalar multiplication only appears to have some of them, and it
+            keeps an algebraic structure on purpose, which is exactly what a
+            hash function has to destroy. This is consistent with how Ethereum
+            works: the public key is then passed through the Keccak-256 hash to
+            get the address.
+          </p>
+        </div>
+      </section>
+
+      <footer>Homework 1 · Statistics · Tommaso Tabacchini</footer>
+    </div>
+
+    <script src="ec.js"></script>
+    <script src="hw1.js"></script>
+  </body>
+</html>

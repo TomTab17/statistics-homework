@@ -1,0 +1,1057 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Homework 2 · Wallet seed → Ethereum address</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Source+Code+Pro:wght@400;600&display=swap"
+    />
+    <link rel="stylesheet" href="hw2.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <a class="back" href="../index.html">← Statistics · Homework</a>
+        <p class="eyebrow">
+          Homework 2 · Hashing, key derivation and cryptographic primitives
+        </p>
+        <h1>Wallet seed <span>→</span> Ethereum address</h1>
+        <div class="rule"></div>
+        <p class="lead">
+          An Ethereum wallet turns a list of words into an address through a
+          chain of standards: BIP-39, BIP-32, BIP-44, secp256k1, Keccak-256 and
+          EIP-55. On this page I implement the chain step by step, check it
+          against the official test vectors, analyse the statistical behaviour
+          of its outputs and place each piece in its historical context.
+        </p>
+        <div class="student">
+          <b>Tommaso Tabacchini</b><span>( Student ID: <i>1934387</i> )</span>
+        </div>
+        <nav class="toc" id="toc" aria-label="Contents">
+          <div>
+            <p>Part I · The pipeline</p>
+            <a href="#s11"><b>1.1</b>Key generation: entropy and mnemonic</a>
+            <a href="#s12"><b>1.2</b>Mnemonic → seed (BIP-39)</a>
+            <a href="#s13"><b>1.3</b>Seed → master key (BIP-32)</a>
+            <a href="#s14"><b>1.4</b>Derivation path (BIP-44)</a>
+            <a href="#s15"><b>1.5</b>Private → public key (secp256k1)</a>
+            <a href="#s16"><b>1.6</b>Public key → address (Keccak-256)</a>
+            <a href="#s17"><b>1.7</b>Checksummed address (EIP-55)</a>
+            <a href="#s18"><b>1.8</b>Checking the results</a>
+          </div>
+          <div>
+            <p>Part II · Concepts and statistics</p>
+            <a href="#s2"><b>2</b>Six kinds of operation</a>
+            <a href="#s3"><b>3</b>Statistical properties</a>
+            <a href="#s31"><b>3.1</b>Entropy and the BIP-39 checksum</a>
+            <a href="#s32"><b>3.2</b>Uniformity of derived addresses</a>
+            <a href="#s33"><b>3.3</b>Avalanche effect of Keccak-256</a>
+            <a href="#s34"><b>3.4</b>EIP-55 as an error-detecting code</a>
+          </div>
+          <div>
+            <p>Part III · Context and discussion</p>
+            <a href="#s4"><b>4</b>Historical context</a>
+            <a href="#s5"><b>5</b>SHA-2 vs Keccak / SHA-3</a>
+            <a href="#s6"><b>6</b>Why so many primitives</a>
+          </div>
+        </nav>
+      </header>
+      <a class="totoc" id="totoc" href="#toc">↑ Contents</a>
+
+      <!-- PART 1 -->
+      <section class="part" id="s1">
+        <p class="eyebrow">Part I</p>
+        <h2>The pipeline, step by step</h2>
+        <p class="intro">
+          All the values below are computed directly on the page from the phrase
+          in the box, using my implementation in
+          <code>crypto.js</code>. As the default phrase I chose the public test
+          mnemonic of Hardhat and Foundry (two Ethereum development tools): its
+          first address is well known, so the result is easy to check.
+        </p>
+
+        <div class="inputs">
+          <label
+            >Mnemonic phrase
+            <textarea
+              id="phrase"
+              rows="2"
+              spellcheck="false"
+              autocomplete="off"
+            ></textarea>
+          </label>
+          <div class="side">
+            <label
+              >BIP-39 passphrase (optional)
+              <input
+                id="pass"
+                type="text"
+                spellcheck="false"
+                autocomplete="off"
+                placeholder="empty"
+              />
+            </label>
+            <label
+              >Address index i
+              <input id="idx" type="number" min="0" max="999" value="0" />
+            </label>
+          </div>
+          <div class="ctrl">
+            <button class="primary" id="gen">Generate a new phrase</button>
+            <button id="reset">Use the test phrase</button>
+            <span class="status" id="status" aria-live="polite"></span>
+          </div>
+        </div>
+        <p class="warn">
+          Everything runs in your browser and nothing is sent anywhere. Still,
+          this code was written to study how things work and has not been
+          audited, so never type the recovery phrase of a real wallet here (or
+          in any web page).
+        </p>
+
+        <div class="lab">
+          <aside class="stage">
+            <div class="flow" id="flow">
+              <h4>Pipeline · current values</h4>
+              <div class="node" data-n="mn">
+                <small>Mnemonic<span data-v="nwords"></span></small
+                ><code data-v="mnShort"></code>
+              </div>
+              <div class="edge" data-e="mn">
+                <b>BIP-39</b> PBKDF2-HMAC-SHA512 <i>key derivation</i>
+              </div>
+              <div class="node" data-n="seed">
+                <small>Seed<span>512 bits</span></small
+                ><code data-v="seedShort"></code>
+              </div>
+              <div class="edge" data-e="seed">
+                <b>BIP-32</b> HMAC-SHA512 <i>key derivation</i>
+              </div>
+              <div class="node" data-n="master">
+                <small>Master key m<span>256 bits</span></small
+                ><code data-v="masterShort"></code>
+              </div>
+              <div class="edge" data-e="master">
+                <b>BIP-44</b> <span data-v="path"></span> <i>key derivation</i>
+              </div>
+              <div class="node" data-n="priv">
+                <small>Private key k<span>256 bits</span></small
+                ><code data-v="privShort"></code>
+              </div>
+              <div class="edge" data-e="priv">
+                <b>secp256k1</b> K = k·G <i>public-key crypto</i>
+              </div>
+              <div class="node" data-n="pub">
+                <small>Public key K<span>65 bytes</span></small
+                ><code data-v="pubShort"></code>
+              </div>
+              <div class="edge" data-e="pub">
+                <b>Keccak-256</b> last 20 bytes <i>hashing</i>
+              </div>
+              <div class="node" data-n="addr">
+                <small>Address<span>20 bytes</span></small
+                ><code data-v="addrLower"></code>
+              </div>
+              <div class="edge" data-e="addr">
+                <b>EIP-55</b> mixed case <i>checksum · encoding</i>
+              </div>
+              <div class="node" data-n="cs">
+                <small>Checksummed address</small
+                ><code data-v="checksummed"></code>
+              </div>
+            </div>
+          </aside>
+
+          <div class="steps" id="steps">
+            <article class="step" id="s11" data-n="mn">
+              <span class="num">1.1</span>
+              <h3>Key generation: entropy and mnemonic (BIP-39)</h3>
+              <p>
+                This is the only step of the whole pipeline that uses
+                randomness. The wallet takes
+                <span class="m">ENT</span> = 128 to 256 random bits (the
+                <em>entropy</em>) from a secure random number generator, and
+                everything after this is computed deterministically from these
+                bits. This is the <strong>key generation</strong> part.
+              </p>
+              <p>
+                BIP-39 then turns the entropy into a form that a person can
+                write down. It adds a checksum, i.e. the first
+                <span class="m">CS = ENT/32</span> bits of
+                <span class="m">SHA-256(entropy)</span>, splits everything into
+                groups of 11 bits and uses each group as an index in a fixed
+                list of 2048 words (2<sup>11</sup> = 2048). The words are
+                therefore just an <strong>encoding</strong> of the entropy, and
+                the last few bits are a <strong>checksum</strong>.
+              </p>
+              <div class="box">
+                <dl class="kv">
+                  <dt>Entropy</dt>
+                  <dd class="hex" data-v="entropy"></dd>
+                  <dt>SHA-256</dt>
+                  <dd class="hex" data-v="entHash"></dd>
+                  <dt>Checksum</dt>
+                  <dd class="hex" data-v="checksum"></dd>
+                </dl>
+              </div>
+              <div class="box tw2"><table class="tbl" id="bits"></table></div>
+              <p class="note" id="bitsNote"></p>
+            </article>
+
+            <article class="step" id="s12" data-n="seed">
+              <span class="num">1.2</span>
+              <h3>Mnemonic → seed (BIP-39)</h3>
+              <p>
+                The phrase is not used directly as a key. BIP-39 first turns it
+                into a 512-bit <em>seed</em> using PBKDF2, a
+                <strong>key derivation</strong> function that applies
+                HMAC-SHA512 many times in a row:
+              </p>
+              <div class="box formula">
+                seed = PBKDF2(HMAC-SHA512, password = phrase, salt = "mnemonic"
+                ‖ passphrase, 2048, 512 bits)
+              </div>
+              <p>
+                The 2048 iterations make every guess more expensive for an
+                attacker. The optional passphrase goes into the salt, so the
+                same words with a different passphrase give a completely
+                different wallet. (Both strings are also Unicode-normalised
+                (NFKD) first, so that the same text always gives the same
+                bytes.)
+              </p>
+              <div class="box hex" data-v="seed"></div>
+            </article>
+
+            <article class="step" id="s13" data-n="master">
+              <span class="num">1.3</span>
+              <h3>Seed → master key (BIP-32)</h3>
+              <p>
+                BIP-32 introduces <em>hierarchical deterministic</em> (HD)
+                wallets: a single seed generates a whole tree of key pairs. The
+                root of the tree comes from one HMAC-SHA512:
+              </p>
+              <div class="box formula">
+                I = HMAC-SHA512(key = "Bitcoin seed", data = seed),&nbsp;&nbsp;
+                I = I<sub>L</sub> ‖ I<sub>R</sub>
+              </div>
+              <p>
+                The left 256 bits are the master private key, and the right 256
+                bits are the <em>chain code</em>, an extra value used to derive
+                the child keys. The string "Bitcoin seed" is fixed by the
+                standard, and Ethereum wallets use it as well, despite the name.
+              </p>
+              <div class="box">
+                <dl class="kv">
+                  <dt>Master key I<sub>L</sub></dt>
+                  <dd class="hex" data-v="masterK"></dd>
+                  <dt>Chain code I<sub>R</sub></dt>
+                  <dd class="hex" data-v="masterC"></dd>
+                </dl>
+              </div>
+            </article>
+
+            <article class="step" id="s14" data-n="priv">
+              <span class="num">1.4</span>
+              <h3>Derivation path (BIP-44)</h3>
+              <p>
+                BIP-32 specifies how to compute child
+                <span class="m">i</span> of a node, but not which branch of the
+                tree to use. BIP-44 fixes this, so that the same phrase gives
+                the same accounts in every wallet that follows it:
+              </p>
+              <div class="box formula">
+                m / purpose′ / coin_type′ / account′ / change / address_index
+              </div>
+              <div class="box tw2"><table class="tbl" id="path"></table></div>
+              <p>
+                For Ethereum the path is
+                <span class="m">m/44′/60′/0′/0/i</span>: 44 means BIP-44, 60 is
+                the number registered for Ether in SLIP-44, and the last index
+                counts the accounts. This is also the default path used by
+                MetaMask.
+              </p>
+              <p>
+                The prime (′) means the child is <em>hardened</em>. The
+                difference is in what goes into the HMAC:
+              </p>
+              <div class="box formula">
+                hardened (i ≥ 2³¹): I = HMAC-SHA512(c<sub>par</sub>, 0x00 ‖
+                k<sub>par</sub> ‖ i)<br />
+                normal (i &lt; 2³¹): I = HMAC-SHA512(c<sub>par</sub>, K<sub
+                  >par</sub
+                >
+                ‖ i)<br />
+                k<sub>i</sub> = (I<sub>L</sub> + k<sub>par</sub>) mod
+                n,&nbsp;&nbsp; c<sub>i</sub> = I<sub>R</sub>
+              </div>
+              <p>
+                A normal child only needs the parent's <em>public</em> key and
+                chain code, so child public keys can be derived without knowing
+                any private key. A hardened child needs the parent's private
+                key. Like PBKDF2, this is <strong>key derivation</strong>: it is
+                deterministic and does not add any new randomness.
+              </p>
+            </article>
+
+            <article class="step" id="s15" data-n="pub">
+              <span class="num">1.5</span>
+              <h3>Private key → public key (secp256k1)</h3>
+              <p>
+                The private key <span class="m">k</span> is a number between 1
+                and <span class="m">n − 1</span>. The public key is the point
+                <span class="m">K = k·G</span> on secp256k1, which is the same
+                equation as the toy curve of Homework 1, just over a 256-bit
+                prime field:
+              </p>
+              <div class="box formula">
+                y² ≡ x³ + 7 (mod p),&nbsp;&nbsp; p = 2²⁵⁶ − 2³² − 977<br />
+                n ≈ 1.158 × 10⁷⁷
+                <small>(number of points generated by G)</small>
+              </div>
+              <p>
+                Computing <span class="m">K</span> from
+                <span class="m">k</span> takes around 256 doublings and
+                additions, while recovering <span class="m">k</span> from
+                <span class="m">K</span> is the elliptic-curve discrete
+                logarithm problem. This is
+                <strong>public-key cryptography</strong>:
+                <span class="m">K</span> can be shared, and anyone who knows it
+                can check signatures made with <span class="m">k</span> (ECDSA).
+                The point is then written as
+                <span class="m">0x04 ‖ x ‖ y</span> (65 bytes), which is just an
+                encoding.
+              </p>
+              <div class="box">
+                <dl class="kv">
+                  <dt>Private key k</dt>
+                  <dd class="hex" data-v="priv"></dd>
+                  <dt>Public key K</dt>
+                  <dd class="hex" data-v="pub"></dd>
+                </dl>
+              </div>
+            </article>
+
+            <article class="step" id="s16" data-n="addr">
+              <span class="num">1.6</span>
+              <h3>Public key → address (Keccak-256)</h3>
+              <p>
+                The address is the last 20 bytes of the Keccak-256
+                <strong>hash</strong> of the public key, without the
+                <span class="m">0x04</span> at the beginning:
+              </p>
+              <div class="box formula">
+                address = Keccak-256(x ‖ y)[12 … 31]
+              </div>
+              <p>
+                The hash turns the 64-byte point, which has a lot of structure,
+                into a short identifier that looks random (see Part II). The
+                highlighted part below shows the 20 bytes that form the address.
+              </p>
+              <div class="box hex" data-v="keccak"></div>
+            </article>
+
+            <article class="step" id="s17" data-n="cs">
+              <span class="num">1.7</span>
+              <h3>Checksummed address (EIP-55)</h3>
+              <p>
+                A plain hex address has no redundancy, so a single mistyped
+                character simply produces another valid address. EIP-55 adds a
+                <strong>checksum</strong> without making the address longer, by
+                using upper and lower case for the letters a–f:
+              </p>
+              <div class="box formula">
+                h = Keccak-256(address in lowercase hex, as ASCII text)<br />
+                letter at position i → uppercase if the i-th hex digit of h is ≥
+                8
+              </div>
+              <p>
+                Each cell shows a character of the address with the matching
+                digit of <span class="m">h</span> under it. Filled cells are
+                letters that became uppercase, outlined cells are letters that
+                stayed lowercase, and digits carry no information. So the result
+                is both an <strong>encoding</strong> (mixed-case hex) and a
+                checksum. Since hexadecimal is case-insensitive, programs that
+                do not check EIP-55 can still read the address normally.
+              </p>
+              <div class="box"><div class="eip" id="eip"></div></div>
+              <p class="note" id="eipNote"></p>
+            </article>
+
+            <article class="step" id="s18" data-n="all">
+              <span class="num">1.8</span>
+              <h3>Checking the results</h3>
+              <p>
+                To make sure my implementation actually follows the standards,
+                the page runs it on the official test vectors and on a
+                well-known reference account every time it loads:
+              </p>
+              <ul class="tests" id="tests"></ul>
+              <p>
+                With the default test phrase the page gives the address
+                <span class="m">0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266</span
+                >, which matches the first account obtained by importing the
+                same phrase into a wallet such as MetaMask or Rabby. Since this
+                phrase is public, it must never be used for real funds.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- PART 2 -->
+      <section class="part" id="s2">
+        <p class="eyebrow">Part II</p>
+        <h2>Six kinds of operation</h2>
+        <p class="intro">
+          The pipeline mixes operations that have very different goals.
+          Separating them makes it much easier to understand why each standard
+          exists.
+        </p>
+        <div class="tw">
+          <table class="disc">
+            <thead>
+              <tr>
+                <th>Operation</th>
+                <th>What it does</th>
+                <th>Where in the pipeline</th>
+                <th>Secret? Reversible?</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Key generation</td>
+                <td>
+                  Creates a new secret from randomness. What matters is the
+                  entropy: the secret has to be unpredictable.
+                </td>
+                <td>
+                  The 128–256 random bits of BIP-39 (1.1). It happens only once,
+                  when the wallet is created.
+                </td>
+                <td>
+                  Secret. Nothing to reverse: the output is pure randomness.
+                </td>
+              </tr>
+              <tr>
+                <td>Key derivation</td>
+                <td>
+                  Computes new keys from an existing secret, in a deterministic
+                  way. The same input always gives the same keys, so a single
+                  backup is enough to recover all of them.
+                </td>
+                <td>
+                  PBKDF2 in BIP-39 (1.2), HMAC-SHA512 in BIP-32 (1.3), the
+                  BIP-44 path (1.4).
+                </td>
+                <td>
+                  Outputs are secret. One-way for hardened children. For normal
+                  children, if a child private key leaks together with the
+                  parent's public key and chain code, the parent private key can
+                  be recovered. This is why BIP-44 hardens the first three
+                  levels.
+                </td>
+              </tr>
+              <tr>
+                <td>Public-key cryptography</td>
+                <td>
+                  Links a private key to a public key, so others can verify
+                  signatures without learning the secret.
+                </td>
+                <td>
+                  secp256k1, <span class="m">K = k·G</span> (1.5); ECDSA
+                  signatures when sending transactions.
+                </td>
+                <td>
+                  <span class="m">k</span> secret,
+                  <span class="m">K</span> public. One-way (ECDLP).
+                </td>
+              </tr>
+              <tr>
+                <td>Hashing</td>
+                <td>
+                  Maps data of any length to a fixed-length output that looks
+                  random; it should be hard to invert and hard to find
+                  collisions.
+                </td>
+                <td>
+                  Keccak-256 for the address (1.6) and inside EIP-55; SHA-256
+                  for the BIP-39 checksum; SHA-512 inside HMAC and PBKDF2.
+                </td>
+                <td>Public algorithm, no key. One-way.</td>
+              </tr>
+              <tr>
+                <td>Checksum</td>
+                <td>
+                  Adds some redundancy to catch accidental mistakes. It does not
+                  protect against an attacker, who can simply recompute it.
+                </td>
+                <td>
+                  The 4–8 checksum bits of BIP-39 (1.1); the upper/lower case of
+                  EIP-55 (1.7).
+                </td>
+                <td>Public. Anyone can check it.</td>
+              </tr>
+              <tr>
+                <td>Encoding</td>
+                <td>
+                  Writes the same information in a different form, with no
+                  security purpose.
+                </td>
+                <td>
+                  Bits → words (BIP-39), bytes → hex, the
+                  <span class="m">0x04 ‖ x ‖ y</span> format, the mixed-case
+                  form of EIP-55.
+                </td>
+                <td>Public. Fully reversible.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="concl">
+          Some steps are a mix of two kinds: a BIP-39 phrase is an encoding with
+          a checksum inside, and EIP-55 is an encoding where the letter case
+          carries a checksum computed with a hash. In my opinion the most
+          important distinction in practice is between generation and
+          derivation: only generation needs a good source of randomness, and
+          everything after it can be recomputed from the phrase at any time.
+        </p>
+
+        <!-- stat -->
+        <div class="anchor" id="s3" style="margin-top: 72px">
+          <span class="num">3</span>
+          <h2>Statistical properties</h2>
+        </div>
+        <p class="intro">
+          These experiments run in the browser when the page loads, and each one
+          can be repeated with its button. They check the properties that each
+          step is supposed to have: an unpredictable input, outputs that look
+          uniform, no useful relation between similar inputs, and a known rate
+          of error detection.
+        </p>
+
+        <div class="find" id="s31">
+          <div>
+            <span class="num">3.1</span>
+            <h3>Entropy and the BIP-39 checksum</h3>
+            <p>
+              The security of the whole wallet depends on the entropy of the
+              first step: with 128 bits an attacker would have to try about
+              2<sup>128</sup> ≈ 3.4 × 10<sup>38</sup> phrases. The checksum bits
+              do not add any entropy; they only make most mistyped phrases
+              invalid.
+            </p>
+            <div class="tw2">
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th>ENT (bits)</th>
+                    <th>CS (bits)</th>
+                    <th>Words</th>
+                    <th>Random phrase valid</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>128</td>
+                    <td>4</td>
+                    <td>12</td>
+                    <td>1/16 = 6.25%</td>
+                  </tr>
+                  <tr>
+                    <td>160</td>
+                    <td>5</td>
+                    <td>15</td>
+                    <td>1/32 ≈ 3.13%</td>
+                  </tr>
+                  <tr>
+                    <td>192</td>
+                    <td>6</td>
+                    <td>18</td>
+                    <td>1/64 ≈ 1.56%</td>
+                  </tr>
+                  <tr>
+                    <td>224</td>
+                    <td>7</td>
+                    <td>21</td>
+                    <td>1/128 ≈ 0.78%</td>
+                  </tr>
+                  <tr>
+                    <td>256</td>
+                    <td>8</td>
+                    <td>24</td>
+                    <td>1/256 ≈ 0.39%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              <strong>Experiment.</strong> I generate
+              <span data-s="n31"></span> random sequences of 12 words and count
+              how many pass the checksum. If SHA-256 behaves like a random
+              function, the expected fraction is 1/16.
+            </p>
+          </div>
+          <div>
+            <div class="stat">
+              <div><b data-s="valid31"></b><small>valid phrases</small></div>
+              <div><b data-s="rate31"></b><small>observed rate</small></div>
+              <div>
+                <b>6.25%</b
+                ><small>expected, 95% range <span data-s="ci31"></span></small>
+              </div>
+            </div>
+            <button class="run" data-run="31">Run again</button>
+          </div>
+        </div>
+
+        <div class="find" id="s32">
+          <div>
+            <span class="num">3.2</span>
+            <h3>Uniformity of derived addresses</h3>
+            <p>
+              Derivation is deterministic, but its outputs should still look
+              random. I derive the addresses for indices
+              <span class="m">i = 0 … <span data-s="n32m"></span></span> of the
+              current phrase and count how often each hex digit appears over all
+              <span data-s="d32"></span> digits. If the addresses are uniform,
+              each digit should appear about <span data-s="e32"></span> times.
+            </p>
+            <p>
+              A χ² test with 15 degrees of freedom gives
+              <span class="v">χ² = <span data-s="chi32"></span></span>, and the
+              critical value at 5% is 25.0.
+              <span data-s="verdict32"></span> Consecutive indices also give
+              unrelated addresses: on average
+              <span class="v" data-s="ham32"></span> of the 160 bits are
+              different between the address of <span class="m">i</span> and that
+              of <span class="m">i + 1</span> (50% expected).
+            </p>
+            <p class="note">
+              The public key itself is not uniform as a bit string (Homework 1
+              showed the same on the toy curve): it is the Keccak-256 hash that
+              makes the addresses look uniform.
+            </p>
+          </div>
+          <div>
+            <div class="fig">
+              <h4>
+                Frequency of each hex digit in the derived addresses (dashed
+                line: expected)
+              </h4>
+              <svg id="h32"></svg>
+            </div>
+            <button class="run" data-run="32">
+              Run again with the current phrase
+            </button>
+          </div>
+        </div>
+
+        <div class="find" id="s33">
+          <div>
+            <span class="num">3.3</span>
+            <h3>Avalanche effect of Keccak-256</h3>
+            <p>
+              When one bit of the input of a good hash function changes, each
+              output bit should change with probability ½, independently of the
+              others. To test this I take <span data-s="n33"></span> random
+              64-byte inputs (the size of a public key), flip one random bit in
+              each, and count how many of the 256 output bits change.
+            </p>
+            <p>
+              For an ideal hash this count follows a binomial distribution
+              <span class="m">B(256, ½)</span>, with mean 128 and standard
+              deviation 8. I get a mean of
+              <span class="v" data-s="mean33"></span> and a standard deviation
+              of <span class="v" data-s="sd33"></span>.
+            </p>
+            <p class="note">
+              The comparison with Homework 1 is instructive: elliptic-curve
+              multiplication preserves an algebraic structure, while a hash
+              function is designed to leave none.
+            </p>
+          </div>
+          <div>
+            <div class="fig">
+              <h4>
+                Number of output bits changed (bars: observed · dashed line:
+                binomial expectation)
+              </h4>
+              <svg id="h33"></svg>
+            </div>
+            <button class="run" data-run="33">Run again</button>
+          </div>
+        </div>
+
+        <div class="find" id="s34">
+          <div>
+            <span class="num">3.4</span>
+            <h3>EIP-55 as an error-detecting code</h3>
+            <p>
+              The checksum is only in the letters. A hex digit is a letter with
+              probability 6/16, so the number of letters in an address follows
+              <span class="m">B(40, 6/16)</span>, with mean 15: on average an
+              address carries 15 check bits. Over
+              <span data-s="n34"></span> random addresses I get a mean of
+              <span class="v" data-s="mean34"></span> letters.
+            </p>
+            <p>
+              After a typo the hash changes completely, so each letter has the
+              right case only with probability ½ while digits always pass. A
+              mistyped address is therefore accepted with probability
+            </p>
+            <div class="box formula">
+              P = (10/16 + 6/16 · ½)<sup>40</sup> = (13/16)<sup>40</sup> ≈
+              0.0247%
+            </div>
+            <p>
+              which is the figure given in EIP-55.
+              <strong>Experiment.</strong> I change one random character in
+              <span data-s="nt34"></span> checksummed addresses (if the new
+              character is a letter it gets a random case) and check them:
+              <span class="v" data-s="pass34"></span> pass, against
+              <span data-s="exp34"></span> expected (95% range
+              <span data-s="ci34"></span>, using the Poisson distribution).
+            </p>
+          </div>
+          <div>
+            <div class="fig">
+              <h4>
+                Letters per address (bars: observed · dashed line: binomial
+                expectation)
+              </h4>
+              <svg id="h34"></svg>
+            </div>
+            <button class="run" data-run="34">Run again</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- PART 3 -->
+      <section class="part" id="s4">
+        <p class="eyebrow">Part III</p>
+        <h2>Historical context</h2>
+        <p class="intro">
+          The basic cryptographic tools are much older than the wallet standards
+          built on top of them. The dates refer to when each one was first
+          published or standardised.
+        </p>
+        <ol class="tl">
+          <li class="k">
+            <time>1977</time>
+            <div>
+              <b>RSA</b>
+              <p>
+                Rivest, Shamir and Adleman present the first practical
+                public-key cryptosystem.
+              </p>
+            </div>
+          </li>
+          <li>
+            <time>2000</time>
+            <div>
+              <b>secp256k1 (SEC 2)</b>
+              <p>
+                The curve is published by the Standards for Efficient
+                Cryptography Group (version 1.0, September 2000).
+              </p>
+            </div>
+          </li>
+          <li class="k">
+            <time>2001</time>
+            <div>
+              <b>SHA-2 (SHA-256, SHA-512)</b>
+              <p>
+                Designed by the NSA, published as a draft in 2001 and officially
+                standardised by NIST in August 2002.
+              </p>
+            </div>
+          </li>
+          <li class="k">
+            <time>2012</time>
+            <div>
+              <b>BIP-32 · HD wallets</b>
+              <p>
+                Pieter Wuille defines hierarchical deterministic key derivation
+                (February 2012).
+              </p>
+            </div>
+          </li>
+          <li>
+            <time>2012</time>
+            <div>
+              <b>Keccak wins the SHA-3 competition</b>
+              <p>
+                NIST picks Keccak (by Bertoni, Daemen, Peeters and Van Assche)
+                as the winner on 2 October 2012.
+              </p>
+            </div>
+          </li>
+          <li class="k">
+            <time>2013</time>
+            <div>
+              <b>BIP-39 · mnemonic code</b>
+              <p>
+                Mnemonic phrases and how to turn them into a seed (September
+                2013).
+              </p>
+            </div>
+          </li>
+          <li class="k">
+            <time>2014</time>
+            <div>
+              <b>BIP-44 · multi-account hierarchy</b>
+              <p>
+                Standard derivation paths for many coins and accounts (April
+                2014).
+              </p>
+            </div>
+          </li>
+          <li>
+            <time>2015</time>
+            <div>
+              <b>Ethereum launches</b>
+              <p>
+                The first release (Frontier) goes live on 30 July 2015, already
+                using Keccak-256.
+              </p>
+            </div>
+          </li>
+          <li class="k">
+            <time>2015</time>
+            <div>
+              <b>SHA-3 (FIPS 202)</b>
+              <p>
+                NIST approves SHA-3 on 5 August 2015, with a padding rule that
+                is different from the original Keccak.
+              </p>
+            </div>
+          </li>
+          <li class="k">
+            <time>2016</time>
+            <div>
+              <b>EIP-55 · checksummed addresses</b>
+              <p>
+                Vitalik Buterin and Alex Van de Sande propose the mixed-case
+                checksum (January 2016).
+              </p>
+            </div>
+          </li>
+        </ol>
+        <p class="concl">
+          The chronological order reveals a layering. Public-key cryptography
+          (1977) and the hash functions (2001–2015) are general tools designed
+          by researchers and standards bodies. The BIPs (2012–2014) came later
+          from the Bitcoin community, as conventions on how to manage keys using
+          those tools, and Ethereum reused them with its own coin type. Ethereum
+          was also launched a few days before FIPS 202 was approved, and it kept
+          the padding of the original Keccak submission: this is why it uses
+          Keccak-256 and not SHA3-256. EIP-55 arrived afterwards to fix a
+          practical problem, since plain hex addresses had no way to detect
+          typos. In the timeline, filled dots are the main standards from the
+          assignment and empty dots are the extra steps I added to complete the
+          picture.
+        </p>
+      </section>
+
+      <section class="part" id="s5">
+        <h2>SHA-2 vs Keccak / SHA-3</h2>
+        <p class="intro">
+          Both are families of cryptographic hash functions standardised by
+          NIST, about thirteen years apart, but their internal designs are
+          completely different.
+        </p>
+        <div class="tw">
+          <table class="disc">
+            <thead>
+              <tr>
+                <th></th>
+                <th>SHA-2 (SHA-256, SHA-512)</th>
+                <th>Keccak / SHA-3</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Construction</td>
+                <td>
+                  Merkle–Damgård: the message is split into blocks and a
+                  compression function processes them one after the other.
+                </td>
+                <td>
+                  Sponge: a fixed permutation first "absorbs" the input into a
+                  big internal state and then "squeezes" the output out of it.
+                </td>
+              </tr>
+              <tr>
+                <td>Internal size</td>
+                <td>SHA-512: 1024-bit blocks, 64-bit words, 80 rounds.</td>
+                <td>
+                  1600-bit state, 24 rounds. For a 256-bit output: rate 1088
+                  bits, capacity 512 bits.
+                </td>
+              </tr>
+              <tr>
+                <td>Length extension</td>
+                <td>
+                  Vulnerable: from H(m) it is possible to compute H(m ‖ padding
+                  ‖ x) without knowing m. HMAC, used in BIP-32 and PBKDF2, is
+                  not affected thanks to its nested construction (the inner hash
+                  is hashed again together with the key).
+                </td>
+                <td>
+                  Not vulnerable, because part of the state (the capacity) is
+                  never given as output.
+                </td>
+              </tr>
+              <tr>
+                <td>Role in the pipeline</td>
+                <td>
+                  SHA-256 for the BIP-39 checksum; SHA-512 inside PBKDF2
+                  (BIP-39) and HMAC (BIP-32).
+                </td>
+                <td>Keccak-256 for the address and for the EIP-55 checksum.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="find" style="border-bottom: 0; padding-bottom: 0">
+          <div>
+            <h3>Keccak-256 is not SHA3-256</h3>
+            <p>
+              Ethereum's Keccak-256 and the standard SHA3-256 use the same
+              permutation, rate and capacity, and differ only in the padding.
+              Before the usual <span class="m">10…01</span> padding, FIPS 202
+              adds two extra bits <span class="m">01</span> (domain separation),
+              so the first padding byte becomes
+              <span class="m">0x06</span> instead of Keccak's
+              <span class="m">0x01</span>. Such a small change is enough to give
+              completely different outputs, as the live comparison on the right
+              shows.
+            </p>
+            <p class="note">
+              Some libraries and older Ethereum APIs call Keccak-256 "sha3",
+              which is a source of confusion: the function actually used should
+              always be checked, because they are not interchangeable.
+            </p>
+          </div>
+          <div class="hashdemo">
+            <label
+              >Input text
+              <input
+                id="hin"
+                type="text"
+                spellcheck="false"
+                placeholder="empty string"
+            /></label>
+            <div>
+              <small class="note">Keccak-256 (Ethereum, pad 0x01)</small>
+              <div class="hex" id="hk"></div>
+            </div>
+            <div>
+              <small class="note">SHA3-256 (FIPS 202, pad 0x06)</small>
+              <div class="hex" id="hs"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="part" id="s6">
+        <h2>Why so many primitives instead of one</h2>
+        <p class="intro">
+          Each step solves a different problem, and no single algorithm has all
+          the required properties.
+        </p>
+        <div class="tw">
+          <table class="disc">
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>Purpose</th>
+                <th>Why another primitive could not do it</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>BIP-39 / BIP-32 / BIP-44</td>
+                <td>
+                  <span class="tag y">KEY MANAGEMENT</span><br />One backup that
+                  a person can read, an unlimited tree of keys, and the same
+                  accounts in every compatible wallet.
+                </td>
+                <td>
+                  A hash or a curve alone does not provide a backup format or a
+                  standard way to organise many keys. These are rules on how to
+                  use the primitives, not primitives themselves.
+                </td>
+              </tr>
+              <tr>
+                <td>secp256k1</td>
+                <td>
+                  <span class="tag y">PUBLIC-KEY CRYPTO</span><br />A public key
+                  that others can use to check signatures made with the private
+                  key.
+                </td>
+                <td>
+                  A hash function has no public/private key pair: verifying a
+                  value requires the input, which here would be the secret.
+                </td>
+              </tr>
+              <tr>
+                <td>Keccak-256</td>
+                <td>
+                  <span class="tag y">HASHING</span><br />A short, fixed-length
+                  identifier that looks random, derived from the public key.
+                </td>
+                <td>
+                  The curve point is long (64 bytes) and has structure, so it is
+                  not suitable as an identifier and doesn't look random.
+                </td>
+              </tr>
+              <tr>
+                <td>EIP-55</td>
+                <td>
+                  <span class="tag y">CHECKSUM</span><br />Catches typing
+                  mistakes without making the address longer, and still works
+                  with old software.
+                </td>
+                <td>
+                  The other primitives are about security against attackers;
+                  none of them deals with accidental mistakes when someone
+                  copies an address by hand.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="concl">
+          <p>
+            The pipeline is therefore a stack of separate layers: randomness
+            creates the secret, derivation organises it into keys, public-key
+            cryptography lets the owner prove they control an account, hashing
+            gives the account a short name, and the checksum protects that name
+            from typos. Each layer can be studied, tested and, if necessary,
+            replaced on its own, and each one is a well-known standard instead
+            of one single algorithm forced to do things it was not designed for.
+          </p>
+          <p>
+            The statistical experiments match this split. Entropy only matters
+            in the generation step; uniformity and the avalanche effect are the
+            expected behaviour of the derivation and hashing steps; and the
+            checksums are described by how often they catch errors: 1 − 1/16 for
+            a random 12-word phrase and about 99.975% for a mistyped EIP-55
+            address.
+          </p>
+        </div>
+      </section>
+
+      <footer>Homework 2 · Statistics · Tommaso Tabacchini</footer>
+    </div>
+
+    <script src="wordlist.js"></script>
+    <script src="crypto.js"></script>
+    <script src="hw2.js"></script>
+  </body>
+</html>

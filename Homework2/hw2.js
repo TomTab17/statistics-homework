@@ -538,12 +538,18 @@ function hashDemo() {
 }
 $("hin").addEventListener("input", hashDemo);
 
+let moved = false;
+["wheel", "touchstart", "keydown", "pointerdown"].forEach((e) =>
+  addEventListener(e, () => (moved = true), { passive: true }),
+);
+
 (async () => {
   $("phrase").value = TEST_PHRASE;
   hashDemo();
   onScroll();
   await compute();
   await runTests();
+  if (location.hash && !moved) $(location.hash.slice(1))?.scrollIntoView();
   await run31();
   await run33();
   await run32();

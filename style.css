@@ -98,9 +98,13 @@ h2 {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 16px;
+}
+.grid > li {
+  width: min(100%, 472px);
 }
 .tile {
   height: 100%;
@@ -122,7 +126,8 @@ h2 {
     box-shadow 0.25s ease,
     border-color 0.25s ease;
 }
-a.tile:hover {
+a.tile:hover,
+.tile.split:hover {
   transform: perspective(800px) translateY(-8px) rotateX(3deg) scale(1.02);
   border-color: var(--accent);
   box-shadow:
@@ -138,9 +143,89 @@ a.tile:active {
 @media (prefers-reduced-motion: reduce) {
   .tile,
   a.tile:hover,
-  a.tile:active {
+  a.tile:active,
+  .tile.split:hover {
     transition: none;
     transform: none;
+  }
+  .ex a,
+  .ex b::after {
+    transition: none;
+  }
+}
+.ex {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  width: 100%;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.ex a {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 10px;
+  border-radius: 10px;
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.2s ease;
+}
+.ex a + a::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 12px;
+  bottom: 12px;
+  width: 1px;
+  background: var(--line);
+}
+.ex b {
+  position: relative;
+  font-weight: 700;
+  font-size: 1rem;
+}
+.ex b::after {
+  content: "→";
+  position: absolute;
+  left: 100%;
+  margin-left: 6px;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+.ex span {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.ex a:hover {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.ex a:hover b::after {
+  opacity: 1;
+  transform: none;
+}
+.ex a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (max-width: 440px) {
+  .ex {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ex a + a::before {
+    left: 12px;
+    right: 12px;
+    top: -6px;
+    bottom: auto;
+    width: auto;
+    height: 1px;
   }
 }
 a.tile:focus-visible {

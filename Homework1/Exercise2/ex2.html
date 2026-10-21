@@ -4,20 +4,21 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark light" />
-    <title>Homework 2 · Wallet seed → Ethereum address</title>
+    <title>Homework 1 · Exercise 2 · Wallet seed → Ethereum address</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Source+Code+Pro:wght@400;600&display=swap"
     />
-    <link rel="stylesheet" href="hw2.css" />
+    <link rel="stylesheet" href="ex2.css" />
   </head>
   <body>
     <div class="wrap">
       <header>
-        <a class="back" href="../index.html">← Statistics · Homework</a>
+        <a class="back" href="../../index.html">← Statistics · Homework</a>
         <p class="eyebrow">
-          Homework 2 · Hashing, key derivation and cryptographic primitives
+          Homework 1 · Exercise 2 · Hashing, key derivation and cryptographic
+          primitives
         </p>
         <h1>Wallet seed <span>→</span> Ethereum address</h1>
         <div class="rule"></div>
@@ -304,7 +305,7 @@
                 The private key <span class="m">k</span> is a number between 1
                 and <span class="m">n − 1</span>. The public key is the point
                 <span class="m">K = k·G</span> on secp256k1, which is the same
-                equation as the toy curve of Homework 1, just over a 256-bit
+                equation as the toy curve of Exercise 1, just over a 256-bit
                 prime field:
               </p>
               <div class="box formula">
@@ -631,7 +632,7 @@
               of <span class="m">i + 1</span> (50% expected).
             </p>
             <p class="note">
-              The public key itself is not uniform as a bit string (Homework 1
+              The public key itself is not uniform as a bit string (Exercise 1
               showed the same on the toy curve): it is the Keccak-256 hash that
               makes the addresses look uniform.
             </p>
@@ -669,7 +670,7 @@
               of <span class="v" data-s="sd33"></span>.
             </p>
             <p class="note">
-              The comparison with Homework 1 is instructive: elliptic-curve
+              The comparison with Exercise 1 is instructive: elliptic-curve
               multiplication preserves an algebraic structure, while a hash
               function is designed to leave none.
             </p>
@@ -1047,11 +1048,11 @@
         </div>
       </section>
 
-      <footer>Homework 2 · Statistics · Tommaso Tabacchini</footer>
+      <footer>Homework 1 · Exercise 2 · Statistics · Tommaso Tabacchini</footer>
     </div>
 
     <script src="wordlist.js"></script>
     <script src="crypto.js"></script>
-    <script src="hw2.js"></script>
+    <script src="ex2.js"></script>
   </body>
 </html>

@@ -1,0 +1,831 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Homework 3 · Systems, attackers and limit theorems</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Source+Code+Pro:wght@400;600&display=swap"
+    />
+    <link rel="stylesheet" href="hw3.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <a class="back" href="../index.html">← Statistics · Homework</a>
+        <p class="eyebrow">Homework 3 · Random walks and limit theorems</p>
+        <h1>n systems, <span>m attackers</span></h1>
+        <div class="rule"></div>
+        <p class="lead">
+          Every attacker tries to penetrate the systems one after the other and
+          collects a score at each step, so the penetration process is a random
+          walk. On this page I simulate many of these walks with two models for
+          the score, study how the total, the average and the normalized score
+          behave as the number of systems grows, and check the results against
+          the Law of Large Numbers and the Central Limit Theorem.
+        </p>
+        <div class="student">
+          <b>Tommaso Tabacchini</b><span>( Student ID: <i>1934387</i> )</span>
+        </div>
+        <nav class="toc" id="toc" aria-label="Contents">
+          <div>
+            <p>Part I · The model</p>
+            <a href="#s11"><b>1.1</b>Systems, attackers and scores</a>
+            <a href="#s12"><b>1.2</b>Two models for the score</a>
+            <a href="#s13"><b>1.3</b>Three normalizations</a>
+            <a href="#s14"><b>1.4</b>Simulation</a>
+            <p style="margin-top: 14px">Part II · Sample trajectories</p>
+            <a href="#s21"><b>2.1</b>Total score</a>
+            <a href="#s22"><b>2.2</b>Average score</a>
+            <a href="#s23"><b>2.3</b>Normalized total score</a>
+          </div>
+          <div>
+            <p>Part III · Distributions as n grows</p>
+            <a href="#s31"><b>3.1</b>Total score</a>
+            <a href="#s32"><b>3.2</b>Average score and the LLN</a>
+            <a href="#s33"><b>3.3</b>Normalized total score</a>
+            <a href="#s34"><b>3.4</b>Variance under the normalizations</a>
+            <a href="#s35"><b>3.5</b>Central Limit Theorem</a>
+          </div>
+          <div>
+            <p>Part IV · Interpretation</p>
+            <a href="#s41"><b>4.1</b>Effect of the system size n</a>
+            <a href="#s42"><b>4.2</b>Effect of the number of attackers m</a>
+            <a href="#s43"><b>4.3</b>Summary</a>
+          </div>
+        </nav>
+      </header>
+      <a class="totoc" id="totoc" href="#toc">↑ Contents</a>
+
+      <section class="part" id="s1">
+        <p class="eyebrow">Part I</p>
+        <h2>The model</h2>
+        <p class="intro">
+          Before simulating anything, I define the process precisely and compute
+          the quantities that the simulations are supposed to reproduce.
+        </p>
+
+        <div class="find" id="s11">
+          <div>
+            <span class="num">1.1</span>
+            <h3>Systems, attackers and scores</h3>
+            <p>
+              There are <span class="m">n</span> systems, for example the
+              servers of a network, and <span class="m">m</span> attackers. Each
+              attacker tries to penetrate the systems one after the other, and
+              the attempt on the <span class="m">i</span>-th system gives a
+              score <span class="m">X<sub>i</sub></span
+              >. The penetration score after <span class="m">k</span> systems is
+              the partial sum
+            </p>
+            <div class="box formula">
+              S<sub>k</sub> = X<sub>1</sub> + X<sub>2</sub> + … +
+              X<sub>k</sub>,&nbsp;&nbsp; k = 1, …, n
+            </div>
+            <p>
+              so every attacker produces a <em>trajectory</em>
+              <span class="m">k → S<sub>k</sub></span
+              >, which is a random walk whose steps are the increments
+              <span class="m">X<sub>i</sub></span
+              >.
+            </p>
+            <p>
+              The increments are assumed to be independent and identically
+              distributed (i.i.d.): all systems are equally hard to penetrate,
+              the outcome on one system does not depend on the others, and all
+              attackers have the same skill and act independently. The
+              <span class="m">m</span> attackers are therefore
+              <span class="m">m</span> independent copies of the same random
+              walk, and their scores after <span class="m">n</span> systems are
+              a sample of size <span class="m">m</span> from the distribution of
+              <span class="m">S<sub>n</sub></span
+              >.
+            </p>
+          </div>
+          <div class="def col">
+            <div>
+              <small>SYSTEMS</small><b>n</b
+              ><span>length of each trajectory (number of steps)</span>
+            </div>
+            <div>
+              <small>ATTACKERS</small><b>m</b
+              ><span>number of independent trajectories</span>
+            </div>
+            <div>
+              <small>SCORE AT STEP i</small><b>X<sub>i</sub></b
+              ><span>i.i.d. increments of the walk</span>
+            </div>
+            <div>
+              <small>SCORE AFTER k SYSTEMS</small><b>S<sub>k</sub></b
+              ><span>position of the walk at time k</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="find" id="s12">
+          <div>
+            <span class="num">1.2</span>
+            <h3>Two models for the score</h3>
+            <p>
+              <strong>Bernoulli model.</strong>
+              <span class="m">X<sub>i</sub> = 1</span> if the
+              <span class="m">i</span>-th system is penetrated and
+              <span class="m">0</span> otherwise, with
+              <span class="m">P(X<sub>i</sub> = 1) = p</span>. Here
+              <span class="m">S<sub>n</sub></span> simply counts the penetrated
+              systems, so it has a Binomial distribution and can only grow.
+            </p>
+            <p>
+              <strong>Rademacher model.</strong>
+              <span class="m">X<sub>i</sub> = +1</span> for a successful attempt
+              and <span class="m">−1</span> for a failed one (for example an
+              attempt that is detected and costs points), each with probability
+              ½. The steps have mean zero, so the walk is symmetric: it has no
+              tendency to go up or down. This is the case studied by the Central
+              Limit Theorem in its simplest form.
+            </p>
+            <p>
+              Writing <span class="m">B</span> for the number of successes, the
+              Rademacher score is
+              <span class="m">S<sub>n</sub> = B − (n − B) = 2B − n</span>, so it
+              always has the same parity as <span class="m">n</span>: after 10
+              systems the score can only be even.
+            </p>
+          </div>
+          <div class="tw2 fig">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Bernoulli</th>
+                  <th>Rademacher</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Values of X<sub>i</sub></td>
+                  <td class="m">{0, 1}</td>
+                  <td class="m">{−1, +1}</td>
+                </tr>
+                <tr>
+                  <td>Mean μ = E[X<sub>i</sub>]</td>
+                  <td class="m">p</td>
+                  <td class="m">0</td>
+                </tr>
+                <tr>
+                  <td>Variance σ²</td>
+                  <td class="m">p(1 − p)</td>
+                  <td class="m">1</td>
+                </tr>
+                <tr>
+                  <td>Distribution of S<sub>n</sub></td>
+                  <td class="m">Bin(n, p)</td>
+                  <td class="m">2·Bin(n, ½) − n</td>
+                </tr>
+                <tr>
+                  <td>Possible values of S<sub>n</sub></td>
+                  <td class="m">0, 1, …, n</td>
+                  <td class="m">−n, −n + 2, …, n</td>
+                </tr>
+              </tbody>
+            </table>
+            <p class="note" style="margin: 12px 0 0">
+              The variance of a single step is
+              <span class="m">E[X²] − μ²</span>: for Bernoulli
+              <span class="m">p − p² = p(1 − p)</span>, for Rademacher
+              <span class="m">1 − 0 = 1</span>.
+            </p>
+          </div>
+        </div>
+
+        <div class="find" id="s13">
+          <div>
+            <span class="num">1.3</span>
+            <h3>Three normalizations</h3>
+            <p>
+              By linearity of the expectation
+              <span class="m">E[S<sub>n</sub>] = nμ</span>, and since the
+              increments are independent their variances add up:
+              <span class="m">Var(S<sub>n</sub>) = nσ²</span>. Dividing
+              <span class="m">S<sub>n</sub></span> by a constant
+              <span class="m">c</span> divides the mean by
+              <span class="m">c</span> and the variance by
+              <span class="m">c²</span>, which gives the three quantities of the
+              homework:
+            </p>
+            <div class="box formula">
+              S<sub>n</sub> = ∑ X<sub>i</sub>&nbsp;&nbsp;&nbsp; S<sub>n</sub>/n
+              = (1/n) ∑ X<sub>i</sub>&nbsp;&nbsp;&nbsp; S<sub>n</sub>/√n =
+              (1/√n) ∑ X<sub>i</sub>
+            </div>
+            <p>
+              The variance grows linearly for the total score, goes to zero for
+              the average score and stays constant only for the normalized
+              score. The simulations below check these formulas and show what
+              they imply for the shape of the distributions.
+            </p>
+          </div>
+          <div class="tw2 fig">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>Quantity</th>
+                  <th>Mean</th>
+                  <th>Variance</th>
+                  <th>Bernoulli</th>
+                  <th>Rademacher</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>S<sub>n</sub></td>
+                  <td class="m">nμ</td>
+                  <td class="m">nσ²</td>
+                  <td class="m">np,&nbsp; np(1 − p)</td>
+                  <td class="m">0,&nbsp; n</td>
+                </tr>
+                <tr>
+                  <td>S<sub>n</sub>/n</td>
+                  <td class="m">μ</td>
+                  <td class="m">σ²/n</td>
+                  <td class="m">p,&nbsp; p(1 − p)/n</td>
+                  <td class="m">0,&nbsp; 1/n</td>
+                </tr>
+                <tr>
+                  <td>S<sub>n</sub>/√n</td>
+                  <td class="m">√n μ</td>
+                  <td class="m">σ²</td>
+                  <td class="m">√n p,&nbsp; p(1 − p)</td>
+                  <td class="m">0,&nbsp; 1</td>
+                </tr>
+              </tbody>
+            </table>
+            <p class="note" style="margin: 12px 0 0">
+              The last two columns give mean and variance for each model.
+            </p>
+          </div>
+        </div>
+
+        <div class="block" id="s14">
+          <span class="num">1.4</span>
+          <h3>Simulation</h3>
+          <div class="txt">
+            <p>
+              Each attacker is simulated step by step with JavaScript's random
+              number generator: a Bernoulli step is 1 when a uniform random
+              number in <span class="m">[0, 1)</span> is smaller than
+              <span class="m">p</span>, and a Rademacher step is
+              <span class="m">+1</span> or <span class="m">−1</span> with
+              probability ½. For the Bernoulli model I use
+              <span class="m">p = 0.3</span>.
+            </p>
+            <p>
+              Every attacker walks through
+              <span class="m">n = 2,000</span> systems. I store the score at the
+              checkpoints <span class="m">n = 1, 2, 3, 5, 7, 10, …, 2,000</span>
+              for all attackers, and the complete path for the first 30. In this
+              way all the distributions at different values of
+              <span class="m">n</span> come from the same trajectories, exactly
+              as if I looked at the same attackers at different times.
+            </p>
+            <p>
+              <strong>Choice of m.</strong> A few trajectories are enough to see
+              how a walk behaves, but the distributions of Part III are
+              estimated from the <span class="m">m</span> scores, so
+              <span class="m">m</span> sets their precision. A probability
+              <span class="m">P</span> estimated from
+              <span class="m">m</span> attackers has standard error
+              <span class="m">√(P(1 − P)/m) ≤ 1/(2√m)</span>, which is
+              <span class="v" data-s="seP"></span> with the current
+              <span class="m">m = <span data-s="m"></span></span>. The value of
+              <span class="m">m</span> can be changed in the bar at the start of
+              Part II.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div class="sim">
+        <div class="bar">
+          <label
+            >Attackers m
+            <select id="sm">
+              <option value="1000">1,000</option>
+              <option value="5000" selected>5,000</option>
+              <option value="10000">10,000</option>
+            </select></label
+          >
+          <span class="info" id="info" aria-live="polite"></span>
+        </div>
+
+        <section class="part" id="s2">
+          <p class="eyebrow">Part II</p>
+          <h2>Sample trajectories</h2>
+          <p class="intro">
+            Each figure shows the paths of the first 30 attackers on a
+            logarithmic time axis, so that the first steps and the last ones are
+            both visible. The solid line is the theoretical mean and the dashed
+            lines are the mean plus or minus two standard deviations, the range
+            where about 95% of the attackers should be at each step.
+          </p>
+
+          <div class="find" id="s21">
+            <div>
+              <span class="num">2.1</span>
+              <h3>Total score S<sub>k</sub></h3>
+              <p>
+                In the Bernoulli model every path is a staircase that can only
+                go up: each penetrated system adds one point. The paths follow
+                the line <span class="m">kp</span>, and the spread around it
+                grows like <span class="m">√k</span>. Since
+                <span class="m">√k</span> grows more slowly than
+                <span class="m">k</span>, the distance from the mean keeps
+                increasing in absolute terms but becomes small compared with the
+                score itself.
+              </p>
+              <p>
+                The Rademacher paths have no direction: they oscillate around
+                zero, cross it many times, and spread out in both directions
+                like <span class="m">±2√k</span>. After
+                <span class="m">n = 2,000</span> systems,
+                <span class="v" data-s="in2B"></span> of all Bernoulli attackers
+                and <span class="v" data-s="in2R"></span> of all Rademacher
+                attackers are inside the dashed band (95% expected).
+              </p>
+            </div>
+            <div>
+              <div class="fig">
+                <h4>
+                  Bernoulli, p = <span data-s="p"></span> · S<sub>k</sub> with
+                  kp ± 2√(kp(1 − p))
+                </h4>
+                <svg id="tSB"></svg>
+              </div>
+              <div class="fig">
+                <h4>Rademacher · S<sub>k</sub> with 0 ± 2√k</h4>
+                <svg id="tSR"></svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="find" id="s22">
+            <div>
+              <span class="num">2.2</span>
+              <h3>Average score S<sub>k</sub>/k</h3>
+              <p>
+                The average score is the fraction of the score collected per
+                system. At the beginning it jumps a lot, because a single step
+                changes it by <span class="m">1/k</span>, but then every path is
+                squeezed towards the mean <span class="m">μ</span>, inside a
+                funnel of width <span class="m">2σ/√k</span>.
+              </p>
+              <p>
+                After 2,000 systems the averages of all
+                <span class="m">m</span> Bernoulli attackers lie between
+                <span class="v" data-s="avgB"></span> (with
+                <span class="m">p = <span data-s="p"></span></span>), and those
+                of the Rademacher attackers between
+                <span class="v" data-s="avgR"></span>. This is the Law of Large
+                Numbers seen on single trajectories: as
+                <span class="m">k</span> grows, the average score of every
+                attacker settles near the expected score per system. Part III
+                makes this statement precise.
+              </p>
+            </div>
+            <div>
+              <div class="fig">
+                <h4>Bernoulli · S<sub>k</sub>/k with p ± 2√(p(1 − p)/k)</h4>
+                <svg id="tAB"></svg>
+              </div>
+              <div class="fig">
+                <h4>Rademacher · S<sub>k</sub>/k with 0 ± 2/√k</h4>
+                <svg id="tAR"></svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="find" id="s23">
+            <div>
+              <span class="num">2.3</span>
+              <h3>Normalized total score S<sub>k</sub>/√k</h3>
+              <p>
+                Dividing by <span class="m">√k</span> instead of
+                <span class="m">k</span> gives a band of constant width: for the
+                Rademacher model the paths keep moving inside
+                <span class="m">±2</span> for the whole time, without settling
+                anywhere. Each single path does not converge to anything; what
+                becomes stable is the distribution of the values across many
+                attackers, which is the subject of 3.5.
+              </p>
+              <p>
+                In the Bernoulli model the same normalization does not remove
+                the drift: the mean <span class="m">√k p</span> grows without
+                limit, and after 2,000 systems the attackers have an average
+                normalized score of <span class="v" data-s="nB"></span> against
+                the theoretical
+                <span class="m">√2000 · p = <span data-s="nBth"></span></span>.
+                The width of the band, instead, is constant here as well.
+              </p>
+            </div>
+            <div>
+              <div class="fig">
+                <h4>Bernoulli · S<sub>k</sub>/√k with √k p ± 2√(p(1 − p))</h4>
+                <svg id="tNB"></svg>
+              </div>
+              <div class="fig">
+                <h4>Rademacher · S<sub>k</sub>/√k with 0 ± 2</h4>
+                <svg id="tNR"></svg>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="part" id="s3">
+          <p class="eyebrow">Part III</p>
+          <h2>Distributions as n grows</h2>
+          <p class="intro">
+            Here I take the scores of all <span class="m">m</span> attackers at
+            <span class="m">n = 10</span>, <span class="m">100</span> and
+            <span class="m">1,000</span> systems and look at their
+            distributions. In each row the three histograms share the same
+            horizontal axis, so that changes in position and width are directly
+            visible. Bars are aligned with the possible values of the score, and
+            the dashed line marks the theoretical mean.
+          </p>
+
+          <div class="block" id="s31">
+            <span class="num">3.1</span>
+            <h3>Total score S<sub>n</sub></h3>
+            <div class="txt">
+              <p>
+                In the Bernoulli model the distribution moves to the right with
+                mean <span class="m">np</span> and widens with standard
+                deviation <span class="m">√(np(1 − p))</span>. Its width
+                relative to the mean, <span class="m">√((1 − p)/(np))</span>,
+                decreases: from <span class="v" data-s="relB10"></span> at
+                <span class="m">n = 10</span> to
+                <span class="v" data-s="relB1000"></span> at
+                <span class="m">n = 1,000</span>. In the Rademacher model the
+                distribution stays centred at zero and only widens, with
+                standard deviation <span class="m">√n</span>. In both cases the
+                variance of the total score grows linearly with
+                <span class="m">n</span>, as the table confirms.
+              </p>
+            </div>
+            <div class="grid3" id="hS"></div>
+            <div class="tw2 fig">
+              <table class="tbl nw" id="tS"></table>
+            </div>
+          </div>
+
+          <div class="block" id="s32">
+            <span class="num">3.2</span>
+            <h3>Average score S<sub>n</sub>/n and the Law of Large Numbers</h3>
+            <div class="txt">
+              <p>
+                On the scale <span class="m">[0, 1]</span> or
+                <span class="m">[−1, 1]</span>, the distribution of the average
+                score shrinks around its mean as <span class="m">n</span> grows.
+                The weak Law of Large Numbers says that the average converges in
+                probability to the mean of a single step:
+              </p>
+              <div class="box formula">
+                for every ε &gt; 0:&nbsp;&nbsp; P(|S<sub>n</sub>/n − μ| &gt; ε)
+                → 0&nbsp; as n → ∞
+              </div>
+              <p>
+                For i.i.d. steps with finite variance this follows from
+                Chebyshev's inequality,
+                <span class="m"
+                  >P(|S<sub>n</sub>/n − μ| &gt; ε) ≤ Var(S<sub>n</sub>/n)/ε² =
+                  σ²/(nε²)</span
+                >, which goes to zero because
+                <span class="m">Var(S<sub>n</sub>/n) = σ²/n</span> does.
+              </p>
+            </div>
+            <div class="grid3" id="hA"></div>
+            <div class="find" style="padding-top: 32px">
+              <div>
+                <p>
+                  To check the definition directly, for every checkpoint I count
+                  the fraction of attackers whose average is more than
+                  <span class="m">ε</span> away from <span class="m">μ</span>.
+                  With <span class="m">ε = 0.05</span>, in the Rademacher model
+                  this fraction is <span class="v" data-s="lR100"></span> at
+                  <span class="m">n = 100</span> and falls to
+                  <span class="v" data-s="lR2000"></span> at
+                  <span class="m">n = 2,000</span>. For Bernoulli it falls from
+                  <span class="v" data-s="lB100"></span> to
+                  <span class="v" data-s="lB2000"></span>.
+                </p>
+                <p>
+                  The Bernoulli curve goes down earlier because its variance
+                  <span class="m">p(1 − p) = <span data-s="pq"></span></span> is
+                  smaller than the Rademacher variance 1. A value of 0 in the
+                  table means that no attacker out of
+                  <span class="m">m</span> was outside the interval, i.e. a
+                  probability smaller than about <span class="m">1/m</span>.
+                </p>
+              </div>
+              <div>
+                <div class="fig">
+                  <h4>
+                    Fraction of attackers with |S<sub>n</sub>/n − μ| &gt; 0.05
+                  </h4>
+                  <svg id="cL"></svg>
+                  <div class="legend">
+                    <span><i class="l1"></i>Bernoulli</span>
+                    <span><i class="l2"></i>Rademacher</span>
+                  </div>
+                </div>
+                <div class="tw2 fig">
+                  <table class="tbl nw" id="tL"></table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="block" id="s33">
+            <span class="num">3.3</span>
+            <h3>Normalized total score S<sub>n</sub>/√n</h3>
+            <div class="txt">
+              <p>
+                With this normalization the width of the distribution no longer
+                depends on <span class="m">n</span>. In the Rademacher model the
+                three histograms are centred at zero with the same spread, and
+                only their shape changes: with 10 systems there are just 11
+                possible values, with 1,000 systems the histogram is a smooth
+                bell.
+              </p>
+              <p>
+                In the Bernoulli model the histograms keep the same width
+                <span class="m">√(p(1 − p))</span> but move to the right with
+                mean <span class="m">√n p</span>, from
+                <span class="v" data-s="nB10"></span> at
+                <span class="m">n = 10</span> to
+                <span class="v" data-s="nB1000"></span> at
+                <span class="m">n = 1,000</span>. The distribution has no limit:
+                for every fixed value <span class="m">c</span>,
+                <span class="m">P(S<sub>n</sub>/√n ≤ c) → 0</span>. This is why
+                the zero-mean Rademacher model is needed to study
+                <span class="m">S<sub>n</sub>/√n</span>; for the Bernoulli model
+                the score would first have to be centred, as in
+                <span class="m">(S<sub>n</sub> − np)/√(np(1 − p))</span>.
+              </p>
+            </div>
+            <div class="grid3" id="hN"></div>
+          </div>
+
+          <div class="block" id="s34">
+            <span class="num">3.4</span>
+            <h3>Variance under the three normalizations</h3>
+            <div class="find" style="padding-top: 12px; border-bottom: 0">
+              <div>
+                <p>
+                  The figures show the sample variance of the three quantities
+                  over the <span class="m">m</span> attackers at every
+                  checkpoint (dots), together with the theoretical values
+                  <span class="m">nσ²</span>, <span class="m">σ²/n</span> and
+                  <span class="m">σ²</span> (lines). On logarithmic axes they
+                  are straight lines with slopes 1, −1 and 0.
+                </p>
+                <p>
+                  The three normalizations therefore answer three different
+                  questions. <span class="m">S<sub>n</sub></span> describes the
+                  absolute score, whose uncertainty grows without limit;
+                  <span class="m">S<sub>n</sub>/n</span> describes the score per
+                  system, whose uncertainty disappears (LLN);
+                  <span class="m">S<sub>n</sub>/√n</span> is the scale where the
+                  fluctuations stay of the same size and their shape can be
+                  studied (CLT).
+                </p>
+              </div>
+              <div>
+                <div class="fig">
+                  <h4>Bernoulli · variance against n</h4>
+                  <svg id="vB"></svg>
+                </div>
+                <div class="fig">
+                  <h4>Rademacher · variance against n</h4>
+                  <svg id="vR"></svg>
+                </div>
+                <div class="legend" style="padding-top: 10px">
+                  <span><i class="l1"></i>S<sub>n</sub></span>
+                  <span><i class="l2"></i>S<sub>n</sub>/n</span>
+                  <span><i class="l3"></i>S<sub>n</sub>/√n</span>
+                </div>
+              </div>
+            </div>
+            <div class="tw2 fig">
+              <table class="tbl nw" id="tV"></table>
+            </div>
+          </div>
+
+          <div class="block" id="s35">
+            <span class="num">3.5</span>
+            <h3>Central Limit Theorem in the Rademacher case</h3>
+            <div class="txt">
+              <p>
+                For i.i.d. steps with mean <span class="m">μ</span> and finite
+                variance <span class="m">σ²</span>, the Central Limit Theorem
+                states that
+                <span class="m">(S<sub>n</sub> − nμ)/(σ√n)</span> converges in
+                distribution to a standard normal. In the Rademacher model
+                <span class="m">μ = 0</span> and <span class="m">σ = 1</span>,
+                so this is exactly the normalized score:
+              </p>
+              <div class="box formula">
+                P(S<sub>n</sub>/√n ≤ x) → Φ(x)&nbsp; for every x,&nbsp;&nbsp;
+                Φ(x) = ∫<sub>−∞</sub><sup>x</sup> e<sup>−t²/2</sup>/√(2π) dt
+              </div>
+              <p>
+                The histograms are drawn as densities (bar area = fraction of
+                attackers) on top of the
+                <span class="m">N(0, 1)</span> density. Already at
+                <span class="m">n = 10</span> the bars follow the bell, even
+                though the score takes only 11 values; at
+                <span class="m">n = 1,000</span> the agreement is very close.
+              </p>
+            </div>
+            <div class="grid3" id="hC"></div>
+          </div>
+        </section>
+
+        <section class="part" id="s4">
+          <p class="eyebrow">Part IV</p>
+          <h2>Interpretation: systems and attackers</h2>
+          <p class="intro">
+            The last step is to translate the results back into the language of
+            the problem. The two parameters play very different roles:
+            <span class="m">n</span> is the length of each walk, while
+            <span class="m">m</span> is the number of walks.
+          </p>
+
+          <div class="find" id="s41">
+            <div>
+              <span class="num">4.1</span>
+              <h3>Effect of the system size n</h3>
+              <p>
+                <strong>Bernoulli.</strong> The expected number of penetrated
+                systems <span class="m">np</span> grows linearly with the size
+                of the network, and so does the damage an attacker can do. The
+                uncertainty grows only like <span class="m">√n</span>, so the
+                <em>share</em> of penetrated systems becomes more and more
+                predictable: in a large network almost every attacker penetrates
+                a fraction close to <span class="m">p</span> of the systems. The
+                table shows the interval containing 95% of the attackers, which
+                shrinks around
+                <span class="m">p = <span data-s="p"></span></span>.
+              </p>
+              <p>
+                <strong>Rademacher.</strong> With a symmetric score nobody is
+                favoured: the scores are spread symmetrically around zero, and
+                the interval containing 95% of the attackers widens like
+                <span class="m">±1.96√n</span>, while the same interval for the
+                average score shrinks around zero. A larger system therefore
+                allows larger gains and losses in absolute terms, but they
+                become negligible compared with the number of systems.
+              </p>
+            </div>
+            <div class="tw2 fig">
+              <h4>
+                Interval containing 95% of the attackers (2.5% to 97.5%
+                quantile)
+              </h4>
+              <table class="tbl nw" id="tQ"></table>
+            </div>
+          </div>
+
+          <div class="block" id="s42">
+            <span class="num">4.2</span>
+            <h3>Effect of the number of attackers m</h3>
+            <div class="txt">
+              <p>
+                The number of attackers does not change the distribution of the
+                score of any single attacker: every histogram of Part III would
+                have the same shape with more attackers, only less noisy. What
+                <span class="m">m</span> changes is the aggregate picture.
+              </p>
+              <p>
+                <strong>Total over all attackers.</strong> The sum
+                <span class="m"
+                  >T = S<sub>n</sub><sup>(1)</sup> + … + S<sub>n</sub
+                  ><sup>(m)</sup></span
+                >
+                is a sum of <span class="m">mn</span> independent steps, so it
+                behaves like a single walk of length <span class="m">mn</span>:
+                mean <span class="m">mnμ</span> and variance
+                <span class="m">mnσ²</span>. The aggregate penetration score
+                therefore grows linearly with the number of attackers in the
+                Bernoulli model, while in the Rademacher model it has no drift
+                and fluctuates on the scale <span class="m">√(mn)</span>. In the
+                simulation
+                <span class="m">T/(mn) = <span data-s="TB"></span></span> for
+                Bernoulli (against <span class="m">p = 0.3</span>), and
+                <span class="m">T/√(mn) = <span data-s="TR"></span></span> for
+                Rademacher, a single draw from a distribution close to
+                <span class="m">N(0, 1)</span>.
+              </p>
+            </div>
+          </div>
+
+          <div class="anchor" id="s43" style="margin-top: 56px">
+            <span class="num">4.3</span>
+            <h3>Summary</h3>
+          </div>
+          <div class="tw" style="margin-top: 12px">
+            <table class="disc">
+              <thead>
+                <tr>
+                  <th>Quantity</th>
+                  <th>Bernoulli as n → ∞</th>
+                  <th>Rademacher as n → ∞</th>
+                  <th>Meaning for systems and attackers</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Total score S<sub>n</sub></td>
+                  <td>
+                    Grows like <span class="m">np</span>, with fluctuations of
+                    order <span class="m">√n</span>.
+                  </td>
+                  <td>
+                    No drift; fluctuations of order <span class="m">√n</span>
+                    in both directions.
+                  </td>
+                  <td>
+                    The absolute damage grows with the size of the network, and
+                    so does its uncertainty.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Average score S<sub>n</sub>/n</td>
+                  <td>
+                    <span class="tag y">LLN</span><br />Converges in probability
+                    to <span class="m">p</span>.
+                  </td>
+                  <td>
+                    <span class="tag y">LLN</span><br />Converges in probability
+                    to 0.
+                  </td>
+                  <td>
+                    The share of penetrated systems becomes predictable: in a
+                    large network all attackers look alike.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Normalized score S<sub>n</sub>/√n</td>
+                  <td>
+                    No limit: the mean <span class="m">√n p</span> diverges; the
+                    variance stays <span class="m">p(1 − p)</span>.
+                  </td>
+                  <td>
+                    <span class="tag y">CLT</span><br />Converges in
+                    distribution to <span class="m">N(0, 1)</span>.
+                  </td>
+                  <td>
+                    Describes how far an attacker is from the average one, in
+                    units that do not depend on the size of the network.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="concl">
+            <p>
+              The simulations reproduce the three behaviours predicted in 1.3.
+              The total score spreads out, the average score concentrates, and
+              the normalized score keeps a stable spread whose shape, in the
+              symmetric case, becomes normal. The Law of Large Numbers and the
+              Central Limit Theorem describe the same sum at two different
+              scales: dividing by <span class="m">n</span> shows where the
+              process is going, dividing by <span class="m">√n</span> shows how
+              it fluctuates around it.
+            </p>
+            <p>
+              For the problem of systems and attackers, a larger
+              <span class="m">n</span> makes the behaviour of each attacker more
+              predictable in relative terms, while a larger
+              <span class="m">m</span> does not change any single attacker but
+              increases the aggregate score linearly in the Bernoulli model and
+              its fluctuations like <span class="m">√m</span>. In the Bernoulli
+              model the defender can plan on a share <span class="m">p</span> of
+              compromised systems per attacker; in the symmetric model the net
+              outcome is a matter of chance, with typical size
+              <span class="m">√n</span>.
+            </p>
+          </div>
+        </section>
+      </div>
+
+      <footer>Homework 3 · Statistics · Tommaso Tabacchini</footer>
+    </div>
+
+    <script src="walk.js"></script>
+    <script src="hw3.js"></script>
+  </body>
+</html>

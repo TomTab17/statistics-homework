@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Homework 4 · Welford and sampling statistics</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Source+Code+Pro:wght@400;600&display=swap"
+    />
+    <link rel="stylesheet" href="hw4.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <a class="back" href="../index.html">← Statistics · Homework</a>
+        <p class="eyebrow">Homework 4 · Online algorithms and sampling</p>
+        <h1>Welford <span>&amp;</span> sampling statistics</h1>
+        <div class="rule"></div>
+        <p class="lead">
+          Exercise 1 derives Welford's recurrences for the sum of squares and
+          the variance. Exercise 2 uses them on simulated hackers to compare
+          sampling means and variances with the true parameters.
+        </p>
+        <div class="student">
+          <b>Tommaso Tabacchini</b><span>( Student ID: <i>1934387</i> )</span>
+        </div>
+      </header>
+
+      <nav class="tabs" role="tablist" aria-label="Exercises">
+        <button role="tab" id="t-ex1" aria-controls="ex1" aria-selected="true">
+          <b>Exercise 1</b><span>Welford's recurrences</span>
+        </button>
+        <button role="tab" id="t-ex2" aria-controls="ex2" aria-selected="false">
+          <b>Exercise 2</b><span>Sampling mean and variance</span>
+        </button>
+      </nav>
+
+      <section class="part ex" id="ex1" role="tabpanel" aria-labelledby="t-ex1">
+        <p class="eyebrow">Exercise 1</p>
+        <h2>Welford's recurrence formulas</h2>
+        <p class="intro">
+          For data <span class="m">x<sub>1</sub>, x<sub>2</sub>, …</span> let
+          <span class="m">M<sub>k</sub></span> be the mean and
+          <span class="m"
+            >S<sub>k</sub> = ∑<sub>i≤k</sub> (x<sub>i</sub> −
+            M<sub>k</sub>)²</span
+          >
+          the sum of squares of the first <span class="m">k</span> values. The
+          goal is to update both with one new value at a time, without storing
+          the data.
+        </p>
+
+        <div class="find" id="s11">
+          <div>
+            <span class="num">1.1</span>
+            <h3>Knuth's recurrence for the mean</h3>
+            <p>
+              Since
+              <span class="m"
+                >kM<sub>k</sub> = (k − 1)M<sub>k−1</sub> + x<sub>k</sub></span
+              >, dividing by <span class="m">k</span>:
+            </p>
+            <div class="box formula">
+              M<sub>k</sub> = M<sub>k−1</sub> + (x<sub>k</sub> −
+              M<sub>k−1</sub>)/k,&nbsp;&nbsp; M<sub>1</sub> = x<sub>1</sub>
+            </div>
+            <p>
+              The new mean is the old one corrected by a fraction
+              <span class="m">1/k</span> of the deviation of the new value. The
+              same idea is used below for <span class="m">S<sub>k</sub></span
+              >.
+            </p>
+          </div>
+          <div class="box formula">
+            useful identity:<br />
+            k(M<sub>k</sub> − M<sub>k−1</sub>) = x<sub>k</sub> − M<sub>k−1</sub>
+          </div>
+        </div>
+
+        <div class="find" id="s12">
+          <div>
+            <span class="num">1.2</span>
+            <h3>Recurrence for the sum of squares</h3>
+            <p>
+              Write
+              <span class="m"
+                >S<sub>k</sub> = ∑ x<sub>i</sub>² − kM<sub>k</sub>²</span
+              >
+              and take the difference between two consecutive steps. Using
+              <span class="m"
+                >(k − 1)M<sub>k−1</sub> = kM<sub>k</sub> − x<sub>k</sub></span
+              >
+              and the identity of 1.1:
+            </p>
+            <div class="box formula">
+              S<sub>k</sub> − S<sub>k−1</sub> = x<sub>k</sub>² − kM<sub>k</sub>²
+              + (k − 1)M<sub>k−1</sub>²<br />
+              = x<sub>k</sub>² − kM<sub>k</sub>² + M<sub>k−1</sub>(kM<sub
+                >k</sub
+              >
+              − x<sub>k</sub>)<br />
+              = x<sub>k</sub>(x<sub>k</sub> − M<sub>k−1</sub>) − M<sub>k</sub> ·
+              k(M<sub>k</sub> − M<sub>k−1</sub>)<br />
+              = x<sub>k</sub>(x<sub>k</sub> − M<sub>k−1</sub>) −
+              M<sub>k</sub>(x<sub>k</sub> − M<sub>k−1</sub>)
+            </div>
+            <p>which gives Welford's recurrence:</p>
+            <div class="box formula res">
+              S<sub>k</sub> = S<sub>k−1</sub> + (x<sub>k</sub> −
+              M<sub>k−1</sub>)(x<sub>k</sub> − M<sub>k</sub>),&nbsp;&nbsp; S<sub
+                >1</sub
+              >
+              = 0
+            </div>
+          </div>
+          <div>
+            <span class="num">1.3</span>
+            <h3>Recurrence for the variance</h3>
+            <p>
+              The sample variance is
+              <span class="m">s<sub>k</sub>² = S<sub>k</sub>/(k − 1)</span>.
+              Substituting
+              <span class="m">S<sub>k</sub> = (k − 1)s<sub>k</sub>²</span> in
+              1.2 and dividing by <span class="m">k − 1</span>:
+            </p>
+            <div class="box formula res">
+              s<sub>k</sub>² = s<sub>k−1</sub>² + [(x<sub>k</sub> −
+              M<sub>k−1</sub>)(x<sub>k</sub> − M<sub>k</sub>) −
+              s<sub>k−1</sub>²] / (k − 1),&nbsp;&nbsp; k ≥ 2
+            </div>
+            <p>
+              With divisor <span class="m">k</span> (population variance
+              <span class="m">σ<sub>k</sub>² = S<sub>k</sub>/k</span>) the same
+              steps give
+              <span class="m"
+                >σ<sub>k</sub>² = σ<sub>k−1</sub>² + [(x<sub>k</sub> −
+                M<sub>k−1</sub>)(x<sub>k</sub> − M<sub>k</sub>) −
+                σ<sub>k−1</sub>²]/k</span
+              >.
+            </p>
+          </div>
+        </div>
+
+        <div class="find" id="s14">
+          <div>
+            <span class="num">1.4</span>
+            <h3>Code</h3>
+            <p>
+              In practice it is enough to update
+              <span class="m">M</span> and <span class="m">S</span>, and divide
+              by <span class="m">k − 1</span> only at the end. The core is three
+              lines: the deviation from the old mean, Knuth's update of the mean
+              and Welford's update of <span class="m">S</span>.
+            </p>
+            <p>
+              Unlike the textbook formula
+              <span class="m">∑ x<sub>i</sub>² − kM<sub>k</sub>²</span>, it
+              never subtracts two large, almost equal numbers, so it does not
+              lose precision when the values are large compared with their
+              spread.
+            </p>
+          </div>
+          <pre>
+function welford(xs) {
+  let mean = 0,
+    ss = 0,
+    k = 0;
+  for (const x of xs) {
+    k++;
+    const d = x - mean;
+    mean += d / k;
+    ss += d * (x - mean);
+  }
+  return { n: k, mean, ss, variance: k &gt; 1 ? ss / (k - 1) : 0 };
+}</pre
+          >
+        </div>
+      </section>
+
+      <section
+        class="part ex"
+        id="ex2"
+        role="tabpanel"
+        aria-labelledby="t-ex2"
+        hidden
+      >
+        <p class="eyebrow">Exercise 2</p>
+        <h2>Sampling mean and variance</h2>
+        <p class="intro">
+          Each of <span class="m">m</span> hackers attacks
+          <span class="m">n</span> systems and gets a score for each one. The
+          sampling mean and variance of every hacker are computed with
+          <code>welford</code> and then averaged over the hackers.
+        </p>
+        <div class="ctls">
+          <label
+            >Score distribution
+            <select id="sd">
+              <option value="binomial" selected>Binomial</option>
+              <option value="uniform">Uniform</option>
+              <option value="geometric">Truncated geometric</option>
+            </select></label
+          >
+          <label
+            >Hackers m
+            <select id="sm">
+              <option value="500">500</option>
+              <option value="2000" selected>2,000</option>
+              <option value="10000">10,000</option>
+            </select></label
+          >
+          <span class="info" id="info" aria-live="polite"></span>
+        </div>
+
+        <div class="find" id="s21">
+          <div>
+            <span class="num">2.1</span>
+            <h3>Score distribution</h3>
+            <p>
+              The score of each attempt is an integer from 0 to 10. Three
+              distributions can be chosen in the menu above:
+            </p>
+            <ul class="lst">
+              <li>
+                <strong>Binomial</strong> Bin(10, 0.3): extending the Bernoulli
+                model of Homework 3, an attempt is made of 10 sub-attacks that
+                succeed with probability 0.3, and the score counts the
+                successes.
+              </li>
+              <li>
+                <strong>Uniform</strong>: every score from 0 to 10 is equally
+                likely.
+              </li>
+              <li>
+                <strong>Truncated geometric</strong>:
+                <span class="m">P(X = x) ∝ 0.6<sup>x</sup></span
+                >, so low scores are much more likely (skewed distribution).
+              </li>
+            </ul>
+            <div class="box formula">
+              <span data-s="dName"></span>,&nbsp;&nbsp; μ =
+              <span data-s="mu"></span>,&nbsp;&nbsp; σ² =
+              <span data-s="s2"></span>
+            </div>
+            <p>
+              With <span class="m">m = <span data-s="m"></span></span> hackers I
+              repeat the experiment for
+              <span class="m">n = 5, 10, 20, 50, 100, 500, 1,000</span>
+              systems, with new scores each time.
+            </p>
+          </div>
+          <div class="fig">
+            <h4>P(X = x) for the chosen score distribution</h4>
+            <svg id="pmf"></svg>
+          </div>
+        </div>
+
+        <div class="block" id="s22">
+          <span class="num">2.2</span>
+          <h3>Results</h3>
+          <div class="txt">
+            <p>
+              For each <span class="m">n</span>: average and standard deviation,
+              over the <span class="m">m</span> hackers, of the sampling means
+              <span class="m">x̄</span> and of the sampling variances
+              <span class="m">s²</span>. In brackets the theoretical values.
+            </p>
+          </div>
+          <div class="tw2 fig">
+            <table class="tbl nw" id="tR"></table>
+          </div>
+          <div class="grid3" id="hist"></div>
+        </div>
+
+        <div class="block" id="s23">
+          <span class="num">2.3</span>
+          <h3>Conclusions</h3>
+          <div class="txt">
+            <p>
+              <strong>Comparison with μ and σ².</strong> For every
+              <span class="m">n</span>, even <span class="m">n = 5</span>, and
+              for each of the three distributions, the average of the sampling
+              means is close to
+              <span class="m">μ = <span data-s="mu"></span></span> and the
+              average of the sampling variances is close to
+              <span class="m">σ² = <span data-s="s2"></span></span>. This is
+              what unbiasedness means: <span class="m">E[x̄] = μ</span> and
+              <span class="m">E[s²] = σ²</span>. The divisor
+              <span class="m">n − 1</span> is needed: with
+              <span class="m">n</span> the average would be
+              <span class="m">σ²(n − 1)/n</span>, i.e.
+              <span class="v" data-s="biased5"></span> for
+              <span class="m">n = 5</span>.
+            </p>
+            <p>
+              <strong>Why it is useful.</strong> In practice only one sample is
+              available and <span class="m">μ</span>,
+              <span class="m">σ²</span> are unknown. Unbiasedness guarantees
+              that <span class="m">x̄</span> and <span class="m">s²</span> have
+              no systematic error, so they can be used as estimates of the
+              population parameters, and <span class="m">s²</span> gives the
+              standard error <span class="m">s/√n</span> of
+              <span class="m">x̄</span>, on which confidence intervals and
+              hypothesis tests are built.
+            </p>
+            <p>
+              <strong>Effect of n.</strong> The averages do not depend on
+              <span class="m">n</span>, but the spread does: the standard
+              deviation of the sampling means follows
+              <span class="m">σ/√n</span>, since
+              <span class="m">Var(x̄) = σ²/n</span>, and for the sampling
+              variances
+            </p>
+            <div class="box formula">
+              Var(s²)&nbsp;=
+              [μ<sub>4</sub>&nbsp;−&nbsp;σ<sup>4</sup>(n&nbsp;−&nbsp;3)/(n&nbsp;−&nbsp;1)]&nbsp;/&nbsp;n,&nbsp;&nbsp;
+              μ<sub>4</sub>&nbsp;=&nbsp;E[(X&nbsp;−&nbsp;μ)<sup>4</sup>]
+            </div>
+            <p>
+              so their standard deviation also decreases like
+              <span class="m">1/√n</span>: in the simulation from
+              <span class="v" data-s="sd5"></span> at
+              <span class="m">n = 5</span> to
+              <span class="v" data-s="sd1000"></span> at
+              <span class="m">n = 1,000</span>. With more systems per hacker,
+              every single hacker's estimates get closer to
+              <span class="m">μ</span> and <span class="m">σ²</span>.
+            </p>
+            <p>
+              <strong>Effect of m.</strong> The number of hackers does not
+              change these standard deviations, which depend only on
+              <span class="m">n</span>. A larger <span class="m">m</span> only
+              makes the averages over the hackers more precise: the average of
+              the sampling means has standard error
+              <span class="m">σ/√(mn)</span>.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <footer>Homework 4 · Statistics · Tommaso Tabacchini</footer>
+    </div>
+
+    <script src="welford.js"></script>
+    <script src="hw4.js"></script>
+  </body>
+</html>

@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Homework 5 · Integration and the normal CDF</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Source+Code+Pro:wght@400;600&display=swap"
+    />
+    <link rel="stylesheet" href="hw5.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <a class="back" href="../index.html">← Statistics · Homework</a>
+        <p class="eyebrow">Homework 5 · Numerical integration</p>
+        <h1>Integrals <span>&amp;</span> the normal CDF</h1>
+        <div class="rule"></div>
+        <p class="lead">
+          Exercise 1 compares Riemann and Lebesgue sums on a set of functions.
+          Exercise 2 computes the standard normal CDF, which has no elementary
+          formula.
+        </p>
+        <div class="student">
+          <b>Tommaso Tabacchini</b><span>( Student ID: <i>1934387</i> )</span>
+        </div>
+      </header>
+
+      <nav class="tabs" role="tablist" aria-label="Exercises">
+        <button role="tab" id="t-ex1" aria-controls="ex1" aria-selected="true">
+          <b>Exercise 1</b><span>Riemann and Lebesgue integration</span>
+        </button>
+        <button role="tab" id="t-ex2" aria-controls="ex2" aria-selected="false">
+          <b>Exercise 2</b><span>Numerical normal CDF</span>
+        </button>
+      </nav>
+
+      <section class="part ex" id="ex1" role="tabpanel" aria-labelledby="t-ex1">
+        <p class="eyebrow">Exercise 1</p>
+        <h2>Riemann and Lebesgue integration</h2>
+        <p class="intro">
+          For a function <span class="m">f</span> on
+          <span class="m">[a, b]</span> I approximate
+          <span class="m">I = ∫f</span> in two ways: by partitioning the domain
+          (Riemann) and by partitioning the range of values (Lebesgue). The
+          pathological functions are treated in 1.3.
+        </p>
+        <div class="ctls">
+          <label
+            >Function
+            <select id="sf">
+              <option value="0" selected>sin x on [0, π]</option>
+              <option value="1">x² on [0, 1]</option>
+              <option value="2">1 if x &lt; 0.5, 3 if x ≥ 0.5</option>
+              <option value="3">|x − 0.5| on [0, 1]</option>
+              <option value="4">1/√x on (0, 1]</option>
+              <option value="5">1 if x &lt; 0.5, 0 if x ≥ 0.5</option>
+              <option value="6">sin x / x on [0, π]</option>
+            </select></label
+          >
+          <span class="info" id="info" aria-live="polite"></span>
+        </div>
+
+        <div class="find" id="s11">
+          <div>
+            <span class="num">1.1</span>
+            <h3>Riemann and Lebesgue sums</h3>
+            <p>
+              <strong>Riemann.</strong> The domain is split into
+              <span class="m">N</span> subintervals of width
+              <span class="m">h = (b − a)/N</span> and
+              <span class="m">f</span> is evaluated at their midpoints:
+            </p>
+            <div class="box formula">
+              R<sub>N</sub> = h ∑<sub>i=1…N</sub> f(a + (i − ½)h)
+            </div>
+            <p>
+              <strong>Lebesgue.</strong> The range
+              <span class="m">[y<sub>0</sub>, y<sub>K</sub>]</span>, from the
+              minimum to the maximum of <span class="m">f</span>, is split into
+              <span class="m">K</span> levels
+              <span class="m">y<sub>j</sub> = y<sub>0</sub> + jΔ</span>, and
+              each level is weighted by the measure of its preimage
+              <span class="m"
+                >E<sub>j</sub> = f<sup>−1</sup>([y<sub>j</sub>,
+                y<sub>j+1</sub>))</span
+              >:
+            </p>
+            <div class="box formula">
+              L<sub>K</sub><sup>−</sup> = ∑ y<sub>j</sub> μ(E<sub>j</sub>) ≤ I ≤
+              L<sub>K</sub><sup>+</sup> = ∑ y<sub>j+1</sub>
+              μ(E<sub>j</sub>),&nbsp;&nbsp; L<sub>K</sub> = (L<sub>K</sub
+              ><sup>−</sup> + L<sub>K</sub><sup>+</sup>)/2
+            </div>
+            <p>
+              The gap
+              <span class="m"
+                >L<sub>K</sub><sup>+</sup> − L<sub>K</sub><sup>−</sup> = Δ(b −
+                a)</span
+              >
+              does not depend on how irregular <span class="m">f</span> is. On a
+              computer <span class="m">μ(E<sub>j</sub>)</span> also has to be
+              approximated: I use a grid of
+              <span class="m">P = 1,000,000</span> cells of length
+              <span class="m">(b − a)/P</span> and add up the cells whose
+              midpoint value falls in
+              <span class="m">[y<sub>j</sub>, y<sub>j+1</sub>)</span>.
+            </p>
+          </div>
+          <div class="fig">
+            <h4>Riemann: N = 8 subintervals of the domain</h4>
+            <svg id="pR"></svg>
+            <h4 class="h4b">Lebesgue: K = 8 levels of the range</h4>
+            <svg id="pL"></svg>
+          </div>
+        </div>
+
+        <div class="block" id="s12">
+          <span class="num">1.2</span>
+          <h3>Results</h3>
+          <div class="txt">
+            <p>
+              All the functions with
+              <span class="m">N = K = 1,000</span>:
+            </p>
+          </div>
+          <div class="tw2 fig">
+            <table class="tbl nw" id="tS"></table>
+          </div>
+          <div class="find sub">
+            <div>
+              <p>
+                Convergence for the chosen function: errors
+                <span class="m">|R<sub>N</sub> − I|</span>,
+                <span class="m">|L<sub>K</sub> − I|</span> and computing times
+                for <span class="m">N = K = 10, …, 100,000</span>. The Lebesgue
+                sum always uses the <span class="m">P = 10<sup>6</sup></span>
+                grid cells.
+              </p>
+              <div class="tw2 fig">
+                <table class="tbl nw" id="tC"></table>
+              </div>
+            </div>
+            <div class="fig">
+              <h4>Error against N = K (log–log)</h4>
+              <svg id="cC"></svg>
+              <div class="legend">
+                <span><i class="l1"></i>Riemann</span>
+                <span><i class="l2"></i>Lebesgue</span>
+              </div>
+              <p class="note" id="cNote"></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="find" id="s13">
+          <div>
+            <span class="num">1.3</span>
+            <h3>Pathological functions</h3>
+            <p>
+              Every floating-point number is rational, so the Dirichlet function
+              <span class="m">D</span> and Thomae's function
+              <span class="m">T</span> cannot be evaluated by testing
+              <span class="m">x</span>. I choose the tags of the Riemann sums
+              explicitly: rational tags
+              <span class="m">x<sub>i</sub> = (2i − 1)/(2N)</span>, where
+              <span class="m">D = 1</span> and
+              <span class="m">T = 1/q</span> after reducing the fraction, or
+              irrational tags
+              <span class="m">x<sub>i</sub> = (i − 1 + 1/√2)/N</span>, where
+              <span class="m">D = T = 0</span>.
+            </p>
+            <p>
+              The Lebesgue integral only needs measures.
+              <span class="m">ℚ ∩ [0, 1]</span> is countable: covering its
+              <span class="m">r</span>-th element with an interval of length
+              <span class="m">ε/2<sup>r</sup></span> gives total length at most
+              <span class="m">ε</span>, so
+              <span class="m">μ(ℚ ∩ [0, 1]) = 0</span>. Then
+              <span class="m">D = T = 0</span> almost everywhere and
+              <span class="m">∫D = ∫T = 0</span>, for every
+              <span class="m">K</span>.
+            </p>
+          </div>
+          <div class="tw2 fig">
+            <h4>Riemann sums R<sub>N</sub></h4>
+            <table class="tbl nw" id="tP"></table>
+          </div>
+        </div>
+
+        <div class="block" id="s14">
+          <span class="num">1.4</span>
+          <h3>Conclusions</h3>
+          <div class="txt">
+            <p>
+              <strong>Accuracy and convergence.</strong> For smooth functions
+              the Riemann error falls like <span class="m">1/N²</span>: for
+              <span class="m">sin x</span> from 8.2e-3 at
+              <span class="m">N = 10</span> to 8.2e-11 at
+              <span class="m">N = 100,000</span>. The Lebesgue error falls more
+              slowly, about like <span class="m">K<sup>−3/2</sup></span> (from
+              1.7e-2 to 1.8e-8), because near the maximum and the minimum, where
+              <span class="m">f′ = 0</span>, a single level contains a large
+              part of the domain. On the other hand the Lebesgue bound
+              <span class="m">Δ(b − a)</span> holds for any bounded
+              <span class="m">f</span>, while the Riemann error depends on
+              smoothness: a jump inside a subinterval gives an error of order
+              <span class="m">h</span> (for the 1/3 step function and
+              <span class="m">N = 1,001</span> it is
+              <span class="v" data-s="odd"></span>). With
+              <span class="m">N</span> even the jump and the kink of
+              <span class="m">|x − 0.5|</span> are grid nodes and the midpoint
+              rule is exact. The Lebesgue sum of a step function only needs the
+              measures of the preimages of its values, so it is exact for every
+              <span class="m">K</span>.
+            </p>
+            <p>
+              <strong>Efficiency.</strong>
+              <span class="m">R<sub>N</sub></span> costs
+              <span class="m">N</span> evaluations of <span class="m">f</span>.
+              <span class="m">L<sub>K</sub></span> costs
+              <span class="m">P</span> evaluations to measure the preimages,
+              plus <span class="m">P + K</span> operations, whatever
+              <span class="m">K</span> is. For <span class="m">sin x</span> the
+              Riemann sum reaches 8.2e-9 with
+              <span class="m">N = 10,000</span> in
+              <span class="v" data-s="tR"></span>, while the Lebesgue sum needs
+              <span class="m">K = 100,000</span> for 1.8e-8, in
+              <span class="v" data-s="tL"></span>. In practice the hard part of
+              the Lebesgue approach is measuring the preimages.
+            </p>
+            <p>
+              <strong>Same limit.</strong> For the Riemann-integrable functions
+              (all the examples except <span class="m">1/√x</span> and
+              <span class="m">D</span>) both sums converge to the exact value,
+              as the theory says: a Riemann-integrable function is also Lebesgue
+              integrable, with the same integral. Thomae's function is
+              discontinuous at every rational number but still Riemann
+              integrable: its sums go to 0 slowly (2.9e-6 at
+              <span class="m">N = 10<sup>6</sup></span
+              >) and agree with the Lebesgue value 0.
+            </p>
+            <p>
+              <strong>Different behaviour.</strong>
+              <span class="m">1/√x</span> is unbounded, so it is not Riemann
+              integrable in the proper sense. The midpoint sums of the improper
+              integral converge slowly, with error about
+              <span class="m">0.6/√N</span>. With equally spaced levels the
+              Lebesgue sum is very poor for small
+              <span class="m">K</span> (error 70 at
+              <span class="m">K = 10</span>): the sampled range is
+              <span class="m">[1, 1,414]</span> and almost all the measure lies
+              in the lowest level. It improves only for large
+              <span class="m">K</span> and stops at the accuracy of the grid
+              (5.7e-4). The Dirichlet function is the clearest case: its Riemann
+              sums are 1 or 0 depending on the tags, so they have no limit and
+              <span class="m">D</span> is not Riemann integrable, while its
+              Lebesgue integral is simply 0.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section
+        class="part ex"
+        id="ex2"
+        role="tabpanel"
+        aria-labelledby="t-ex2"
+        hidden
+      >
+        <p class="eyebrow">Exercise 2</p>
+        <h2>Numerical computation of the normal CDF</h2>
+        <p class="intro">
+          <span class="m"
+            >Φ(x) = P(Z ≤ x) = ∫<sub>−∞</sub><sup>x</sup> φ(t) dt</span
+          >
+          with
+          <span class="m">φ(t) = e<sup>−t²/2</sup>/√(2π)</span>. The integral
+          over the whole line equals 1 (with polar coordinates,
+          <a
+            href="https://faculty.etsu.edu/gardnerr/4047/notes-Hogg-McKean-Craig/Hogg-McKean-Craig-3-4.pdf"
+            >Hogg, McKean, Craig §3.4</a
+          >), but for a finite <span class="m">x</span> there is no formula with
+          elementary functions.
+        </p>
+
+        <div class="find" id="s21">
+          <div>
+            <span class="num">2.1</span>
+            <h3>Why Φ is not elementary: Liouville's theorem</h3>
+            <p>
+              Liouville's theorem, in the form used for integrands
+              <span class="m">f e<sup>g</sup></span
+              >: if <span class="m">f</span> and <span class="m">g</span> are
+              rational functions, <span class="m">g</span> not constant, and
+              <span class="m">∫ f e<sup>g</sup> dx</span> is elementary, then
+            </p>
+            <div class="box formula">
+              ∫ f e<sup>g</sup> dx = R e<sup>g</sup> + C,&nbsp;&nbsp; R
+              rational, i.e. f = R′ + g′R
+            </div>
+            <p>
+              For <span class="m">e<sup>−t²/2</sup></span> we have
+              <span class="m">f = 1</span> and <span class="m">g = −t²/2</span>,
+              so we would need a rational <span class="m">R</span> with
+              <span class="m">R′ − tR = 1</span>. This is impossible:
+            </p>
+            <ul class="lst">
+              <li>
+                if <span class="m">R</span> is a polynomial of degree
+                <span class="m">d</span>, <span class="m">tR</span> has degree
+                <span class="m">d + 1</span> and
+                <span class="m">R′</span> degree <span class="m">d − 1</span>,
+                so <span class="m">R′ − tR</span> has degree
+                <span class="m">d + 1 ≥ 1</span> and is not the constant 1 (and
+                <span class="m">R = 0</span> gives 0);
+              </li>
+              <li>
+                if <span class="m">R</span> has a pole of order
+                <span class="m">k ≥ 1</span> at some <span class="m">c</span>,
+                then <span class="m">R′</span> has a pole of order
+                <span class="m">k + 1</span> there, while
+                <span class="m">tR</span> has order at most
+                <span class="m">k</span> and 1 has none.
+              </li>
+            </ul>
+            <p>
+              So <span class="m">e<sup>−t²/2</sup></span> has no elementary
+              antiderivative, and neither has
+              <span class="m">Φ(x) = ½ + ∫<sub>0</sub><sup>x</sup> φ(t) dt</span
+              >.
+            </p>
+          </div>
+          <div>
+            <span class="num">2.2</span>
+            <h3>The error function</h3>
+            <div class="box formula">
+              erf(z) = (2/√π) ∫<sub>0</sub><sup>z</sup> e<sup>−s²</sup>
+              ds,&nbsp;&nbsp; Φ(x) = ½[1 + erf(x/√2)]
+            </div>
+            <p>
+              The second identity follows from
+              <span class="m">t = √2 s</span> and is an exact representation of
+              <span class="m">Φ</span>: erf is a new function, defined by that
+              integral, with known properties (it is odd,
+              <span class="m">erf(∞) = 1</span>, it has series and asymptotic
+              expansions). But giving the integral a name does not give its
+              digits. Like <span class="m">sin</span> or
+              <span class="m">exp</span>, erf has to be computed by an
+              algorithm, and JavaScript does not even have
+              <code>Math.erf</code>, so every method below is written by hand.
+            </p>
+          </div>
+        </div>
+
+        <div class="find" id="s23">
+          <div>
+            <span class="num">2.3</span>
+            <h3>Numerical methods</h3>
+            <ul class="lst">
+              <li>
+                <strong>Simpson's rule</strong> on
+                <span class="m">½ + ∫<sub>0</sub><sup>x</sup> φ</span> with
+                <span class="m">n</span> subintervals, error
+                <span class="m">O(h<sup>4</sup>)</span>,
+                <span class="m">h = x/n</span>.
+              </li>
+              <li>
+                <strong>Power series of erf</strong>:
+                <div class="box formula">
+                  erf(z) = (2/√π) ∑<sub>k≥0</sub> (−1)<sup>k</sup>
+                  z<sup>2k+1</sup>/(k! (2k + 1))
+                </div>
+                It converges for every <span class="m">z</span>, but the terms
+                alternate in sign and grow up to about
+                <span class="m">e<sup>z²</sup></span> before decreasing, so for
+                large <span class="m">z</span> the digits cancel.
+              </li>
+              <li>
+                <strong>Abramowitz–Stegun 7.1.26</strong>:
+                <span class="m"
+                  >erf(z) ≈ 1 − (a<sub>1</sub>t + … +
+                  a<sub>5</sub>t<sup>5</sup>) e<sup>−z²</sup></span
+                >, <span class="m">t = 1/(1 + pz)</span>, with fixed constants
+                and error at most <span class="m">1.5 · 10<sup>−7</sup></span
+                >.
+              </li>
+            </ul>
+            <p>
+              <strong>My method</strong> combines two expansions chosen so that
+              no subtraction of close numbers happens:
+            </p>
+            <ul class="lst">
+              <li>
+                <span class="m">|x| &lt; 2.5</span>:
+                <span class="m"
+                  >S(x) = e<sup>x²/2</sup> ∫<sub>0</sub><sup>x</sup> e<sup
+                    >−t²/2</sup
+                  >
+                  dt</span
+                >
+                satisfies <span class="m">S′ = xS + 1</span>,
+                <span class="m">S(0) = 0</span>, which gives a series whose
+                terms all have the same sign:
+                <div class="box formula">
+                  Φ(x) = ½ + φ(x) ∑<sub>k≥0</sub> x<sup>2k+1</sup>/(1 · 3 · … ·
+                  (2k + 1))
+                </div>
+              </li>
+              <li>
+                <span class="m">|x| ≥ 2.5</span>: the tail has Laplace's
+                continued fraction, with <span class="m">a = |x|</span>,
+                <div class="box formula">
+                  1 − Φ(a) = φ(a)/(a + 1/(a + 2/(a + 3/(a + …))))
+                </div>
+                evaluated with Lentz's algorithm until the relative change is
+                below
+                <span class="m">10<sup>−16</sup></span
+                >. For <span class="m">x &lt; 0</span> this is
+                <span class="m">Φ(x)</span> itself, so the left tail keeps full
+                relative precision.
+              </li>
+            </ul>
+          </div>
+          <pre>
+function normcdf(x) {
+  const a = Math.abs(x);
+  if (a &lt; 2.5) {
+    let t = x,
+      s = x;
+    for (let k = 1; Math.abs(t) &gt; 1e-17 * Math.abs(s); k++) {
+      t *= (x * x) / (2 * k + 1);
+      s += t;
+    }
+    return 0.5 + phi(x) * s;
+  }
+  let f = a,
+    c = a,
+    d = 0;
+  for (let k = 1; k &lt; 500; k++) {
+    d = 1 / (a + k * d);
+    c = a + k / c;
+    f *= c * d;
+    if (Math.abs(c * d - 1) &lt; 1e-16) break;
+  }
+  const tail = phi(a) / f;
+  return x &lt; 0 ? tail : 1 - tail;
+}</pre
+          >
+        </div>
+
+        <div class="block" id="s24">
+          <span class="num">2.4</span>
+          <h3>Results</h3>
+          <div class="txt">
+            <p>
+              The reference is the table of numerical values in Wikipedia's
+              article on the
+              <a
+                href="https://en.wikipedia.org/wiki/68%E2%80%9395%E2%80%9399.7_rule"
+                >68–95–99.7 rule</a
+              >, which gives
+              <span class="m">p = P(|Z| ≤ x) = 2Φ(x) − 1</span> to 15 decimals,
+              so <span class="m">Φ(x) = (1 + p)/2</span> with an uncertainty of
+              <span class="m">5 · 10<sup>−16</sup></span
+              >. Absolute errors:
+            </p>
+          </div>
+          <div class="tw2 fig">
+            <table class="tbl nw" id="tN"></table>
+          </div>
+          <div class="txt">
+            <p>
+              In the left tail <span class="m">Φ(x)</span> is tiny and absolute
+              errors say little. The same table gives the expected frequency
+              outside <span class="m">μ ± kσ</span> as "1 in
+              <span class="m">N</span>", i.e.
+              <span class="m">Φ(−k) = 1/(2N)</span>, with relative precision
+              <span class="m">0.5/N</span>. Relative errors:
+            </p>
+          </div>
+          <div class="tw2 fig">
+            <table class="tbl nw" id="tT"></table>
+          </div>
+          <div class="txt">
+            <p>
+              Efficiency: maximum absolute error at the 33 reference points
+              <span class="m">x = 0, ±0.5, …, ±8</span> and average time per
+              evaluation over 100,000 random <span class="m">x</span> in
+              <span class="m">[−8, 8]</span>:
+            </p>
+          </div>
+          <div class="tw2 fig">
+            <table class="tbl nw" id="tE"></table>
+          </div>
+        </div>
+
+        <div class="block" id="s25">
+          <span class="num">2.5</span>
+          <h3>Conclusions</h3>
+          <div class="txt">
+            <p>
+              <strong>Accuracy.</strong> My method agrees with the reference
+              within its uncertainty at every point, and in the left tail its
+              relative error is below the precision of the reference. The erf
+              series is exact for small <span class="m">x</span> but loses
+              digits by cancellation as <span class="m">x</span> grows (error
+              <span class="v" data-s="es8"></span> at
+              <span class="m">x = 8</span>). Abramowitz–Stegun has a uniform
+              error of about <span class="m">10<sup>−7</sup></span
+              >, and Simpson's error falls like
+              <span class="m">n<sup>−4</sup></span
+              >. All the formulas of the type ½ + something lose the left tail,
+              because they compute a tiny number as the difference of two
+              numbers close to ½.
+            </p>
+            <p>
+              <strong>Efficiency.</strong> Abramowitz–Stegun is the fastest
+              (<span class="v" data-s="tAS"></span>) but gives only 7 digits. My
+              method gives full double precision in
+              <span class="v" data-s="tMy"></span> with at most about 70 terms.
+              Simpson's rule needs <span class="m">n</span> evaluations of
+              <span class="m">φ</span> per point, and the erf series needs more
+              and more terms as <span class="m">|x|</span> grows.
+            </p>
+            <p>
+              <strong>Why numerical methods are still needed.</strong> erf gives
+              an exact closed form for <span class="m">Φ</span>, but evaluating
+              erf still requires one of these algorithms. Numerical libraries do
+              the same, with series, continued fractions and rational
+              approximations on different ranges of <span class="m">x</span>.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <footer>Homework 5 · Statistics · Tommaso Tabacchini</footer>
+    </div>
+
+    <script src="integrals.js"></script>
+    <script src="normcdf.js"></script>
+    <script src="hw5.js"></script>
+  </body>
+</html>

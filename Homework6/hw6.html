@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Homework 6 · Statistical independence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Source+Code+Pro:wght@400;600&display=swap"
+    />
+    <link rel="stylesheet" href="hw6.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <a class="back" href="../index.html">← Statistics · Homework</a>
+        <p class="eyebrow">Homework 6 · Statistical independence</p>
+        <h1>Contingency tables <span>&amp;</span> independence</h1>
+        <div class="rule"></div>
+        <p class="lead">
+          I build the contingency table of a bivariate dataset, compare it with
+          the frequencies expected under independence through the χ² statistic
+          and discuss what the result means.
+        </p>
+        <div class="student">
+          <b>Tommaso Tabacchini</b><span>( Student ID: <i>1934387</i> )</span>
+        </div>
+      </header>
+
+      <section class="part ex" id="hw">
+        <p class="eyebrow">Dataset</p>
+        <h2>Graduate admissions at UC Berkeley, 1973</h2>
+        <p class="intro">
+          Applicants to the six largest departments in fall 1973 (Bickel,
+          Hammel, O'Connell, <i>Science</i> 1975; dataset
+          <a
+            href="https://search.r-project.org/R/refmans/datasets/html/UCBAdmissions.html"
+            >UCBAdmissions</a
+          >
+          in R): 4,526 people, each with
+          <span class="m">X</span> = gender (Male, Female),
+          <span class="m">F</span> = admission (Admitted, Rejected) and the
+          department applied to. The analysis can be repeated for a single
+          department.
+        </p>
+        <div class="ctls">
+          <label
+            >Applicants
+            <select id="sd">
+              <option value="all" selected>All departments</option>
+              <option value="A">Department A</option>
+              <option value="B">Department B</option>
+              <option value="C">Department C</option>
+              <option value="D">Department D</option>
+              <option value="E">Department E</option>
+              <option value="F">Department F</option>
+            </select></label
+          >
+          <span class="info" id="info"></span>
+        </div>
+
+        <div class="find" id="s1">
+          <div>
+            <span class="num">1</span>
+            <h3>Contingency table</h3>
+            <p>
+              The data are distributed as counts, so I first expand them into
+              one record per applicant. From there on the code only sees a list
+              of pairs <span class="m">(x, f)</span>, as for any raw bivariate
+              dataset: it finds the levels of the two variables, counts the
+              joint frequencies <span class="m">n<sub>ij</sub></span
+              >, the marginal totals and the expected frequencies, and adds up
+              χ².
+            </p>
+            <div class="tw2 fig">
+              <h4>Joint frequencies n<sub>ij</sub> and marginal totals</h4>
+              <table class="tbl nw" id="tO"></table>
+            </div>
+            <div class="tw2 fig">
+              <h4>Relative frequencies f<sub>ij</sub> = n<sub>ij</sub>/n</h4>
+              <table class="tbl nw" id="tJ"></table>
+            </div>
+          </div>
+          <pre>
+function contingency(pairs) {
+  const xs = [...new Set(pairs.map((p) =&gt; p[0]))],
+    fs = [...new Set(pairs.map((p) =&gt; p[1]))];
+  const n = xs.map(() =&gt; fs.map(() =&gt; 0));
+  for (const [x, f] of pairs) n[xs.indexOf(x)][fs.indexOf(f)]++;
+  const row = n.map((r) =&gt; r.reduce((a, b) =&gt; a + b, 0)),
+    col = fs.map((_, j) =&gt; n.reduce((a, r) =&gt; a + r[j], 0)),
+    tot = row.reduce((a, b) =&gt; a + b, 0),
+    exp = row.map((ri) =&gt; col.map((cj) =&gt; (ri * cj) / tot));
+  let chi2 = 0;
+  for (let i = 0; i &lt; xs.length; i++)
+    for (let j = 0; j &lt; fs.length; j++)
+      chi2 += (n[i][j] - exp[i][j]) ** 2 / exp[i][j];
+  const df = (xs.length - 1) * (fs.length - 1);
+  return { xs, fs, n, row, col, tot, exp, chi2, df };
+}</pre
+          >
+        </div>
+
+        <div class="find" id="s2">
+          <div>
+            <span class="num">2</span>
+            <h3>Marginal and conditional frequencies</h3>
+            <p>
+              The marginal frequencies are the last row and column of the
+              relative table,
+              <span class="m">f<sub>i·</sub> = n<sub>i·</sub>/n</span> and
+              <span class="m">f<sub>·j</sub> = n<sub>·j</sub>/n</span>. The
+              conditional frequencies divide each cell by its row or its column
+              total:
+            </p>
+            <div class="box formula">
+              f(F = j | X = i) = n<sub>ij</sub>/n<sub>i·</sub>,&nbsp;&nbsp; f(X
+              = i | F = j) = n<sub>ij</sub>/n<sub>·j</sub>
+            </div>
+            <p>
+              If the variables were independent, every row of the first table
+              would equal its last row (the marginal of
+              <span class="m">F</span>), and every column of the second table
+              would equal its last column.
+            </p>
+          </div>
+          <div>
+            <div class="tw2 fig">
+              <h4>F given X (rows sum to 100%)</h4>
+              <table class="tbl nw" id="tFX"></table>
+            </div>
+            <div class="tw2 fig">
+              <h4>X given F (columns sum to 100%)</h4>
+              <table class="tbl nw" id="tXF"></table>
+            </div>
+          </div>
+        </div>
+
+        <div class="find" id="s3">
+          <div>
+            <span class="num">3</span>
+            <h3>Expected frequencies and χ²</h3>
+            <p>
+              Under independence
+              <span class="m"
+                >f<sub>ij</sub> = f<sub>i·</sub>f<sub>·j</sub></span
+              >, so the expected count of each cell is
+            </p>
+            <div class="box formula">
+              E<sub>ij</sub> = n<sub>i·</sub> n<sub>·j</sub> / n,&nbsp;&nbsp; χ²
+              = ∑<sub>i,j</sub> (n<sub>ij</sub> − E<sub>ij</sub>)² / E<sub
+                >ij</sub
+              >
+            </div>
+            <p>
+              Under the hypothesis of independence χ² has approximately a
+              chi-square distribution with
+              <span class="m">(r − 1)(c − 1)</span> degrees of freedom, if all
+              <span class="m">E<sub>ij</sub> ≥ 5</span>. The p-value is
+              <span class="m">P(χ²<sub>df</sub> ≥ χ²)</span>, the regularized
+              upper incomplete gamma function
+              <span class="m">Q(df/2, χ²/2)</span>, which I compute with a
+              series for small arguments and a continued fraction for large ones
+              (as for the normal tail in Homework 5).
+            </p>
+          </div>
+          <div>
+            <div class="tw2 fig">
+              <h4>Observed and expected counts</h4>
+              <table class="tbl nw" id="tE"></table>
+            </div>
+            <div class="box formula res" id="res"></div>
+          </div>
+        </div>
+
+        <div class="block" id="s4">
+          <span class="num">4</span>
+          <h3>Independence in probability and in statistics</h3>
+          <div class="txt">
+            <p>
+              <strong>Probability.</strong> Two events are independent if
+              <span class="m">P(A ∩ B) = P(A)P(B)</span>. Two discrete random
+              variables are independent if
+              <span class="m">P(X = x, F = y) = P(X = x)P(F = y)</span> for all
+              <span class="m">x, y</span>, or equivalently
+              <span class="m">P(F = y | X = x) = P(F = y)</span>: knowing
+              <span class="m">X</span> does not change the distribution of
+              <span class="m">F</span>. It is a property of the model, exact by
+              definition.
+            </p>
+            <p>
+              <strong>Statistics.</strong> On observed data the variables are
+              independent if
+              <span class="m"
+                >f<sub>ij</sub> = f<sub>i·</sub>f<sub>·j</sub></span
+              >
+              in every cell, i.e.
+              <span class="m">n<sub>ij</sub> = E<sub>ij</sub></span>
+              and all conditional distributions coincide with the marginal one.
+              In a sample this practically never holds exactly, so the question
+              becomes whether the deviations are larger than chance would give
+              if the variables were independent in the population. This is what
+              the χ² test measures: χ² = 0 means perfect empirical independence,
+              and a small p-value means that deviations as large as the observed
+              ones would be very unlikely under independence.
+            </p>
+          </div>
+        </div>
+
+        <div class="block" id="s5">
+          <span class="num">5</span>
+          <h3>Interpretation</h3>
+          <div class="txt">
+            <p id="verdict"></p>
+            <p>Repeating the test department by department:</p>
+          </div>
+          <div class="tw2 fig">
+            <table class="tbl nw" id="tD"></table>
+          </div>
+          <div class="txt">
+            <p>
+              Only department A has a significant dependence, and there women
+              are admitted more often than men (82% against 62%). In the other
+              five departments the two admission rates are close and
+              independence is not rejected.
+            </p>
+          </div>
+        </div>
+
+        <div class="block" id="s6">
+          <span class="num">6</span>
+          <h3>Conclusions: association and causality</h3>
+          <div class="txt">
+            <p>
+              In the aggregate data gender and admission are clearly
+              statistically dependent: 44.5% of men and 30.4% of women were
+              admitted, and the χ² test rejects independence with
+              <span class="m">p ≈ 8 · 10<sup>−22</sup></span
+              >. This is an association, not a proof that gender causes
+              rejection.
+            </p>
+            <p>
+              The department is a third variable associated with both. 93% of
+              the women applied to departments C–F, which admit between 6% and
+              35% of their applicants, while more than half of the men applied
+              to A and B, which admit more than 60%. Within each department,
+              where this variable is fixed, the dependence almost disappears,
+              and in A it even goes in the opposite direction. The aggregate
+              association is produced by where people applied (Simpson's
+              paradox), not by how each department treated men and women.
+            </p>
+            <p>
+              A χ² test only says whether two variables are associated. To speak
+              of causality one has to control the other variables that could
+              explain the association, for example by stratifying as above or,
+              when possible, with a randomized experiment. Also, a small p-value
+              says that an association exists, not that it is large: with 4,526
+              observations even modest differences become significant, so the
+              conditional frequencies are needed to judge its size.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <footer>Homework 6 · Statistics · Tommaso Tabacchini</footer>
+    </div>
+
+    <script src="independence.js"></script>
+    <script src="data.js"></script>
+    <script src="hw6.js"></script>
+  </body>
+</html>

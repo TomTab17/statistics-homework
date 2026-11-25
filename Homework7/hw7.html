@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Homework 7 · Convergence and Bayesian inference</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Source+Code+Pro:wght@400;600&display=swap"
+    />
+    <link rel="stylesheet" href="hw7.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <a class="back" href="../index.html">← Statistics · Homework</a>
+        <p class="eyebrow">Homework 7 · Convergence and Bayesian inference</p>
+        <h1>Convergence <span>&amp;</span> Bayes</h1>
+        <div class="rule"></div>
+        <p class="lead">
+          Exercise 1 compares the modes of convergence, their role in the Law of
+          Large Numbers and the Central Limit Theorem, and explains the √n.
+          Exercise 2 covers conditional probability, Bayes' theorem and Bayesian
+          updating, with two examples.
+        </p>
+        <div class="student">
+          <b>Tommaso Tabacchini</b><span>( Student ID: <i>1934387</i> )</span>
+        </div>
+      </header>
+
+      <nav class="tabs" role="tablist" aria-label="Exercises">
+        <button role="tab" id="t-ex1" aria-controls="ex1" aria-selected="true">
+          <b>Exercise 1</b><span>Modes of convergence</span>
+        </button>
+        <button role="tab" id="t-ex2" aria-controls="ex2" aria-selected="false">
+          <b>Exercise 2</b><span>Bayes and statistical inference</span>
+        </button>
+      </nav>
+
+      <section class="part ex" id="ex1" role="tabpanel" aria-labelledby="t-ex1">
+        <p class="eyebrow">Exercise 1</p>
+        <h2>Modes of convergence in probability theory</h2>
+        <p class="intro">
+          <span class="m">X<sub>1</sub>, X<sub>2</sub>, …</span> and
+          <span class="m">X</span> are random variables on the same probability
+          space <span class="m">(Ω, 𝓕, P)</span>. The four modes differ in what
+          is required to become small: the error on every single outcome
+          <span class="m">ω</span>, the probability of a large error, the mean
+          squared error, or only the distribution.
+        </p>
+
+        <div class="find" id="s11">
+          <div>
+            <span class="num">1.1</span>
+            <h3>The four modes</h3>
+            <ul class="lst">
+              <li>
+                <strong>Almost sure</strong>:
+                <span class="m">P({ω : X<sub>n</sub>(ω) → X(ω)}) = 1</span>.
+                Every trajectory converges, except a set of probability 0.
+              </li>
+              <li>
+                <strong>In probability</strong>:
+                <span class="m">P(|X<sub>n</sub> − X| &gt; ε) → 0</span>
+                for every <span class="m">ε &gt; 0</span>. For each large
+                <span class="m">n</span> a big error is unlikely, but along a
+                trajectory it can still happen infinitely often.
+              </li>
+              <li>
+                <strong>In mean square (L²)</strong>:
+                <span class="m">E[(X<sub>n</sub> − X)²] → 0</span>. It controls
+                the size of the error, not only its probability, and needs
+                finite second moments.
+              </li>
+              <li>
+                <strong>In distribution</strong>:
+                <span class="m"
+                  >F<sub>X<sub>n</sub></sub
+                  >(x) → F<sub>X</sub>(x)</span
+                >
+                at every continuity point of <span class="m">F<sub>X</sub></span
+                >. Only the laws are compared: the variables need not even be
+                defined on the same space.
+              </li>
+            </ul>
+          </div>
+          <div>
+            <div class="box formula res">
+              a.s. ⇒ in probability ⇒ in distribution<br />
+              L² ⇒ in probability<br />
+              in distribution to a constant ⇒ in probability
+            </div>
+            <p>
+              L² implies convergence in probability by Chebyshev:
+              <span class="m"
+                >P(|X<sub>n</sub> − X| &gt; ε) ≤ E[(X<sub>n</sub> −
+                X)²]/ε²</span
+              >. No other arrow holds:
+            </p>
+            <ul class="lst">
+              <li>
+                <strong>in probability, not a.s.</strong>: independent
+                <span class="m">X<sub>n</sub> ~ Bernoulli(1/n)</span>.
+                <span class="m">P(X<sub>n</sub> = 1) = 1/n → 0</span> (and
+                <span class="m">E[X<sub>n</sub>²] = 1/n</span>, so also L²), but
+                <span class="m">∑ 1/n = ∞</span> and by the second
+                Borel–Cantelli lemma <span class="m">X<sub>n</sub> = 1</span>
+                infinitely often with probability 1;
+              </li>
+              <li>
+                <strong>a.s., not L²</strong>:
+                <span class="m">U ~ Uniform(0, 1)</span>,
+                <span class="m">X<sub>n</sub> = n · 1{U &lt; 1/n}</span>.
+                <span class="m">X<sub>n</sub>(ω) = 0</span> as soon as
+                <span class="m">n &gt; 1/U</span>, but
+                <span class="m">E[X<sub>n</sub>²] = n → ∞</span>;
+              </li>
+              <li>
+                <strong>in distribution, not in probability</strong>:
+                <span class="m">X ~ N(0, 1)</span>,
+                <span class="m">X<sub>n</sub> = −X</span>. Same law for every
+                <span class="m">n</span>, but
+                <span class="m">|X<sub>n</sub> − X| = 2|X|</span> does not
+                shrink.
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="find" id="s12">
+          <div>
+            <span class="num">1.2</span>
+            <h3>Role in the LLN, the CLT and inference</h3>
+            <p>
+              Let <span class="m">X<sub>1</sub>, X<sub>2</sub>, …</span> be
+              i.i.d. with mean <span class="m">μ</span> and variance
+              <span class="m">σ²</span>, and
+              <span class="m">x̄<sub>n</sub> = S<sub>n</sub>/n</span>.
+            </p>
+            <ul class="lst">
+              <li>
+                <strong>L²</strong>:
+                <span class="m"
+                  >E[(x̄<sub>n</sub> − μ)²] = Var(x̄<sub>n</sub>) = σ²/n → 0</span
+                >.
+              </li>
+              <li>
+                <strong>Weak LLN</strong>:
+                <span class="m">x̄<sub>n</sub> → μ</span> in probability. With
+                finite variance it follows from L² and Chebyshev,
+                <span class="m">P(|x̄<sub>n</sub> − μ| &gt; ε) ≤ σ²/(nε²)</span>.
+              </li>
+              <li>
+                <strong>Strong LLN</strong> (Kolmogorov):
+                <span class="m">x̄<sub>n</sub> → μ</span> almost surely, if only
+                <span class="m">E|X| &lt; ∞</span>. It says that along one
+                infinite sequence of trials the running mean converges, which
+                justifies reading long-run frequencies as probabilities (first
+                figure).
+              </li>
+              <li>
+                <strong>CLT</strong>:
+                <span class="m"
+                  >Z<sub>n</sub> = √n(x̄<sub>n</sub> − μ)/σ → N(0, 1)</span
+                >
+                in distribution, and only in distribution:
+                <span class="m"
+                  >Z<sub>2n</sub> = (Z<sub>n</sub> + Z′<sub>n</sub>)/√2</span
+                >
+                with <span class="m">Z′<sub>n</sub></span> independent of
+                <span class="m">Z<sub>n</sub></span
+                >, so <span class="m">Z<sub>2n</sub> − Z<sub>n</sub></span> does
+                not go to 0. The values keep fluctuating, only their law
+                stabilizes (second figure, with a very skewed
+                <span class="m">X</span>).
+              </li>
+            </ul>
+            <p>
+              In statistics, a <strong>consistent</strong> estimator is one that
+              converges in probability to the parameter (e.g.
+              <span class="m">s² → σ²</span>). <strong>Slutsky</strong>'s
+              theorem mixes the modes: if
+              <span class="m">Z<sub>n</sub> → Z</span> in distribution and
+              <span class="m">Y<sub>n</sub> → c</span> in probability, then
+              <span class="m">Y<sub>n</sub>Z<sub>n</sub> → cZ</span>. This is
+              why <span class="m">s</span> can replace <span class="m">σ</span>:
+              <span class="m">√n(x̄<sub>n</sub> − μ)/s → N(0, 1)</span>, the
+              basis of large-sample tests and confidence intervals. The delta
+              method, the asymptotic normality of maximum likelihood estimators
+              and the Glivenko–Cantelli theorem (the empirical CDF converges
+              uniformly to <span class="m">F</span>, almost surely) are built
+              the same way.
+            </p>
+          </div>
+          <div>
+            <div class="fig">
+              <h4>
+                Running means of 20 sequences, X ~ Exp(1), with the band μ ±
+                2σ/√n
+              </h4>
+              <svg id="fRun"></svg>
+            </div>
+            <div class="fig">
+              <h4>
+                Z<sub>n</sub> for 20,000 samples of X ~ Exp(1) and the N(0, 1)
+                density
+              </h4>
+              <div class="stack" id="fClt"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="block" id="s13">
+          <span class="num">1.3</span>
+          <h3>Why √n</h3>
+          <div class="txt">
+            <p>
+              The variance of a sum is
+              <span class="m"
+                >Var(S<sub>n</sub>) = ∑ Var(X<sub>i</sub>) + 2 ∑<sub
+                  >i&lt;j</sub
+                >
+                Cov(X<sub>i</sub>, X<sub>j</sub>)</span
+              >. If the <span class="m">X<sub>i</sub></span> are independent
+              (uncorrelated is enough) the covariances vanish and variance is
+              additive, <span class="m">Var(S<sub>n</sub>) = nσ²</span>.
+              Standard deviations are not additive: the sum grows like
+              <span class="m">n</span> but its fluctuation only like
+              <span class="m">σ√n</span>, because independent errors partly
+              cancel. Hence <span class="m">sd(x̄<sub>n</sub>) = σ/√n</span>.
+            </p>
+            <p>
+              So <span class="m">x̄<sub>n</sub> − μ</span> is of order
+              <span class="m">1/√n</span>:
+              <span class="m">n<sup>a</sup>(x̄<sub>n</sub> − μ)</span> goes to 0
+              for <span class="m">a &lt; ½</span> and blows up for
+              <span class="m">a &gt; ½</span>. Only
+              <span class="m">a = ½</span> gives a non-degenerate limit, which
+              is exactly the CLT. In inference the same factor gives the
+              standard error <span class="m">s/√n</span>, the interval
+              <span class="m">x̄ ± z s/√n</span>, the statistic
+              <span class="m">t = √n(x̄ − μ<sub>0</sub>)/s</span> and the sample
+              size <span class="m">n = (zσ/E)²</span> for a margin
+              <span class="m">E</span>: halving the error needs four times the
+              data.
+            </p>
+            <p>
+              Independence is what makes this work. If all pairs have
+              correlation <span class="m">ρ &gt; 0</span>, then
+              <span class="m"
+                >Var(x̄<sub>n</sub>) = σ²[1/n + (1 − 1/n)ρ] → σ²ρ</span
+              >: there is no rate and no LLN (with
+              <span class="m">ρ = 0.1</span> the standard deviation never goes
+              below <span class="m">0.32σ</span>). Weak dependence, with
+              correlations that die out quickly, keeps the
+              <span class="m">√n</span> rate but changes the constant (effective
+              sample size). Without a finite variance the rate changes too: for
+              the Cauchy distribution <span class="m">x̄<sub>n</sub></span> has
+              the same law as <span class="m">X<sub>1</sub></span> for every
+              <span class="m">n</span>.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section
+        class="part ex"
+        id="ex2"
+        role="tabpanel"
+        aria-labelledby="t-ex2"
+        hidden
+      >
+        <p class="eyebrow">Exercise 2</p>
+        <h2>Conditional probability, Bayes and inference</h2>
+        <p class="intro">
+          Conditional probability is how probabilities change when information
+          arrives. Bayes' theorem turns it into a rule for learning about
+          unknown parameters from data.
+        </p>
+
+        <div class="find" id="s21">
+          <div>
+            <span class="num">2.1</span>
+            <h3>Conditional probability</h3>
+            <p>
+              <strong>In probability theory</strong>, for
+              <span class="m">P(B) &gt; 0</span>,
+            </p>
+            <div class="box formula">P(A | B) = P(A ∩ B) / P(B)</div>
+            <p>
+              is a new probability measure concentrated on
+              <span class="m">B</span>. It gives the multiplication rule
+              <span class="m">P(A ∩ B) = P(A | B)P(B)</span>, the law of total
+              probability
+              <span class="m"
+                >P(A) = ∑ P(A | B<sub>k</sub>)P(B<sub>k</sub>)</span
+              >
+              for a partition, and independence as
+              <span class="m">P(A | B) = P(A)</span>.
+            </p>
+          </div>
+          <div>
+            <p>
+              <strong>In statistics</strong> what we condition on is the
+              observed data <span class="m">x</span>. A model gives
+              <span class="m">f(x | θ)</span>, the probability of the data for
+              each value of the parameter. Frequentist inference keeps
+              <span class="m">θ</span> fixed and unknown, uses
+              <span class="m">L(θ; x) = f(x | θ)</span> as a function of
+              <span class="m">θ</span> (maximum likelihood) and judges
+              procedures over repeated samples. Bayesian inference treats
+              <span class="m">θ</span> as a random variable and asks for
+              <span class="m">P(θ | x)</span>: the conditioning has to be
+              reversed, and Bayes' theorem does it.
+            </p>
+          </div>
+        </div>
+
+        <div class="find" id="s22">
+          <div>
+            <span class="num">2.2</span>
+            <h3>Bayes' theorem</h3>
+            <div class="box formula">
+              P(H | E) = P(E | H) P(H) / P(E),&nbsp;&nbsp; P(E) = ∑<sub>k</sub>
+              P(E | H<sub>k</sub>) P(H<sub>k</sub>)
+            </div>
+            <p>For a parameter with density, given data x:</p>
+            <div class="box formula res">
+              π(θ | x) = L(θ; x) π(θ) / ∫ L(θ′; x) π(θ′) dθ′ ∝ L(θ; x) π(θ)
+            </div>
+            <p>
+              <strong>Updating.</strong> The posterior after
+              <span class="m">x<sub>1</sub></span> is the prior for
+              <span class="m">x<sub>2</sub></span
+              >:
+              <span class="m"
+                >π(θ | x<sub>1</sub>, x<sub>2</sub>) ∝ f(x<sub>2</sub> | θ) π(θ
+                | x<sub>1</sub>)</span
+              >, the same as using both data at once (for conditionally
+              independent data). This is why the process is central in Bayesian
+              inference: the posterior contains everything, and every answer
+              comes from it: point estimates (posterior mean, mode), credible
+              intervals with <span class="m">P(θ ∈ I | x) = 0.95</span> read
+              literally, predictions for new data, decisions that minimize
+              expected loss.
+            </p>
+          </div>
+          <div>
+            <ul class="lst">
+              <li>
+                <strong>Prior</strong> <span class="m">π(θ)</span>: what is
+                known about <span class="m">θ</span> before the data (previous
+                studies, physical constraints, or only vague bounds).
+              </li>
+              <li>
+                <strong>Likelihood</strong>
+                <span class="m">L(θ; x) = f(x | θ)</span>: how probable the
+                observed data are for each <span class="m">θ</span>. It carries
+                all the information of the data and is not a distribution on
+                <span class="m">θ</span> (it need not integrate to 1).
+              </li>
+              <li>
+                <strong>Posterior</strong> <span class="m">π(θ | x)</span>: the
+                prior reweighted by the likelihood and normalized. Values of
+                <span class="m">θ</span> that explain the data well gain weight,
+                the others lose it.
+              </li>
+              <li>
+                <strong>Evidence</strong> <span class="m">P(x)</span>: the
+                normalizing constant. It does not change the shape of the
+                posterior, but it is what compares different models.
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="find" id="s23">
+          <div>
+            <span class="num">2.3</span>
+            <h3>Example 1: a diagnostic test</h3>
+            <p>
+              A disease has prevalence <span class="m">p</span>: this is the
+              prior <span class="m">P(D)</span>. A test has sensitivity
+              <span class="m">P(+ | D) = 0.99</span> and specificity
+              <span class="m">P(− | not D) = 0.95</span>: these are the
+              likelihoods of a positive result under the two hypotheses. After a
+              positive result
+            </p>
+            <div class="box formula">
+              P(D | +) = 0.99p / [0.99p + 0.05(1 − p)]
+            </div>
+            <p>
+              With <span class="m">p = 1%</span> a positive test gives only
+              16.7%: among 10,000 people, 99 true positives against 495 false
+              positives from the 9,900 healthy ones. The likelihood is the same
+              in every row of the table, only the prior changes, and it turns a
+              probable false alarm into an almost sure diagnosis. A second
+              independent positive test uses 16.7% as its prior and gives 79.8%.
+            </p>
+          </div>
+          <div class="tw2 fig">
+            <h4>P(D | +) for different priors</h4>
+            <table class="tbl nw" id="tDx">
+              <thead>
+                <tr>
+                  <th>Prevalence <i class="nt">p</i></th>
+                  <th>One positive</th>
+                  <th>Two positives</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="find" id="s24">
+          <div>
+            <span class="num">2.4</span>
+            <h3>Example 2: estimating a success probability</h3>
+            <p>
+              <span class="m">θ</span> is the probability that an attack
+              succeeds (as in Homework 3), and the data are
+              <span class="m">k</span> successes in
+              <span class="m">n</span> independent attempts, so
+              <span class="m">L(θ) ∝ θ<sup>k</sup>(1 − θ)<sup>n−k</sup></span
+              >. With a Beta(a, b) prior the posterior is again a Beta
+              (conjugate prior):
+            </p>
+            <div class="box formula">
+              π(θ | k) = Beta(a + k, b + n − k),&nbsp;&nbsp; E[θ | k] = (a +
+              k)/(a + b + n)
+            </div>
+            <p>
+              The posterior mean is a weighted average of the prior mean
+              <span class="m">a/(a + b)</span> and of the observed frequency
+              <span class="m">k/n</span>, with weights
+              <span class="m">a + b</span> and <span class="m">n</span>: the
+              prior counts as <span class="m">a + b</span> extra observations.
+              The data have <span class="m">k = 0.7n</span>; the three priors
+              are flat, centered on 0.5, and wrong (mean 0.1).
+            </p>
+            <div class="tw2 fig">
+              <h4>Posterior mean and 95% credible interval</h4>
+              <table class="tbl nw" id="tB"></table>
+            </div>
+          </div>
+          <div>
+            <div class="ctls">
+              <label
+                >Prior
+                <select id="sp">
+                  <option value="0" selected>Flat, Beta(1, 1)</option>
+                  <option value="1">Centered, Beta(10, 10)</option>
+                  <option value="2">Wrong, Beta(2, 18)</option>
+                </select></label
+              >
+              <label
+                >Attempts n
+                <select id="sn">
+                  <option value="10" selected>10</option>
+                  <option value="100">100</option>
+                  <option value="1000">1,000</option>
+                </select></label
+              >
+            </div>
+            <div class="fig">
+              <svg id="fB"></svg>
+              <div class="legend">
+                <span><i class="l3"></i>Prior</span>
+                <span><i class="l1"></i>Likelihood (normalized)</span>
+                <span><i class="l2"></i>Posterior</span>
+              </div>
+              <p class="note" id="bNote"></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="block" id="s26">
+          <span class="num">2.5</span>
+          <h3>Advantages, limitations and influence on the conclusions</h3>
+          <div class="txt">
+            <p>
+              <strong>Advantages.</strong> Prior knowledge enters explicitly
+              instead of informally. The answer is a probability statement about
+              the parameter, so a credible interval means what people usually
+              think a confidence interval means. Updating is coherent and
+              sequential, and the method works with few data: with a flat prior,
+              0 successes in 3 attempts give a posterior mean of 0.2, not the
+              estimate 0 of maximum likelihood.
+            </p>
+            <p>
+              <strong>Limitations.</strong> The prior is a choice, and with few
+              data the conclusions depend on it: with
+              <span class="m">n = 10</span> the three posterior means are 0.67,
+              0.57 and 0.30. "Non-informative" priors are not unique (flat on
+              <span class="m">θ</span> is not flat on the log-odds). The
+              evidence integral rarely has a closed form, so real models need
+              numerical methods such as MCMC. If the likelihood (the model) is
+              wrong, the posterior is wrong too, and a prior that gives
+              probability 0 to the true value can never be corrected by data.
+            </p>
+            <p>
+              <strong>Influence on the conclusions.</strong> The weight of the
+              prior is fixed, while the information in the likelihood grows with
+              <span class="m">n</span> and the posterior standard deviation
+              shrinks like <span class="m">1/√n</span>, the rate of Exercise 1.
+              With <span class="m">n = 1,000</span> the three posterior means
+              are 0.700, 0.696 and 0.688 and the intervals almost coincide: the
+              data dominate. In the diagnostic example the data are a single
+              test, so the prior stays decisive. A Bayesian analysis should
+              therefore state its prior and show how much the results change
+              with other reasonable priors.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <footer>Homework 7 · Statistics · Tommaso Tabacchini</footer>
+    </div>
+
+    <script src="hw7.js"></script>
+  </body>
+</html>
